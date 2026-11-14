@@ -177,7 +177,11 @@
 </head>
 <body>
 
-<div class="loading" id="loadingView">Loading…</div>
+<div class="loading" id="loadingView"><div style="text-align:center;max-width:520px;padding:24px">
+  <div id="loadingText">Loading…</div>
+  <div id="loadingDetail" style="margin-top:10px;font-size:12px;color:var(--red);word-break:break-word"></div>
+  <button class="btn default" id="loadingSignOut" style="margin-top:16px" hidden>Log out</button>
+</div></div>
 
 <!-- ================= AUTH ================= -->
 <div class="auth" id="authView" hidden>
@@ -374,7 +378,7 @@
   const $ = s => document.querySelector(s);
 
   if(!window.supabase || !window.supabase.createClient){
-    $("#loadingView").textContent = "Couldn’t load the board. Check your connection and reload.";
+    $("#loadingText").textContent = "Couldn’t load the board. Check your connection and reload.";
     return;
   }
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -402,6 +406,8 @@
     return m;
   }
   const redirectUrl = location.origin + location.pathname;
+
+  $("#loadingSignOut").addEventListener("click", async () => { await sb.auth.signOut(); });
 
   // ---------- auth ----------
   document.querySelectorAll("[data-goto]").forEach(b => b.addEventListener("click", () => showAuthForm(b.dataset.goto)));
@@ -463,7 +469,7 @@
 
   async function enterApp(u){
     user = u;
-    showView("loadingView"); $("#loadingView").textContent = "Loading your board…";
+    showView("loadingView"); $("#loadingText").textContent = "Loading your board…"; $("#loadingDetail").textContent = ""; $("#loadingSignOut").hidden = true;
     // load profile (create it if the signup trigger hasn't)
     let { data: p, error: pe } = await sb.from("profiles").select("display_name, default_currency").eq("id", u.id).maybeSingle();
     if(!pe && !p){
@@ -472,16 +478,26 @@
       p = ins.data;
     }
     if(p) profile = { display_name: p.display_name || (u.email||"").split("@")[0], default_currency: CURRENCIES[p.default_currency] ? p.default_currency : "USD" };
-    const ok = await loadCards();
-    if(!ok){ $("#loadingView").textContent = "Couldn’t load your board. Check your connection and reload."; return; }
+    const err = await loadCards();
+    if(err){
+      const m = err.message || String(err);
+      const missing = /does not exist|could not find the table|schema cache|PGRST205|42P01/i.test(m + " " + (err.code||""));
+      const denied = /permission denied|42501/i.test(m + " " + (err.code||""));
+      $("#loadingText").textContent = missing ? "The database isn’t set up yet. Run schema.sql in Supabase’s SQL Editor, then reload."
+        : denied ? "The database refused access. Re-run schema.sql in Supabase’s SQL Editor, then reload."
+        : "Couldn’t load your board. Check your connection and reload.";
+      $("#loadingDetail").textContent = "Details: " + m + (err.code ? " (" + err.code + ")" : "");
+      $("#loadingSignOut").hidden = false;
+      return;
+    }
     applyProfile(); showView("appView"); render(); checkImport();
   }
 
   async function loadCards(){
     const { data, error } = await sb.from("commissions").select("*").order("sort_order", { ascending: true });
-    if(error){ console.error(error); return false; }
+    if(error){ console.error(error); return error; }
     cards = new Map(data.map(r => [r.id, fromRow(r)]));
-    return true;
+    return null;
   }
   function fromRow(r){
     return { id:r.id, client:r.client||"", desc:r.description||"", deadline:r.deadline||"", price:Number(r.price)||0,
@@ -496,7 +512,7 @@
 
   // refresh when coming back to the tab (keeps phone + computer in step)
   document.addEventListener("visibilitychange", async () => {
-    if(document.visibilityState === "visible" && user && !drag && !anyModalOpen()){ if(await loadCards()) render(); }
+    if(document.visibilityState === "visible" && user && !drag && !anyModalOpen()){ if(!(await loadCards())) render(); }
   });
   function anyModalOpen(){ return !!document.querySelector(".scrim.open"); }
 
@@ -768,7 +784,7 @@
     if(error){ toast("Import failed: " + friendly(error)); return; }
     try{ localStorage.removeItem(OLD_LS_KEY); }catch(e){}
     $("#importBanner").hidden = true;
-    if(await loadCards()) render();
+    if(!(await loadCards())) render();
     toast(`Imported ${rows.length} card${rows.length===1?"":"s"}.`);
   });
 
