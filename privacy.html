@@ -5,11 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Privacy · Commission Board</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<script>
+  (function(){ var t=null; try{ t=localStorage.getItem("cb-theme"); }catch(e){}
+    if(t!=="dark" && t!=="light") t = (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t); })();
+</script>
 <style>
-  body{margin:0;background:#f7f8f9;color:#172b4d;font:400 15px/1.6 Inter,-apple-system,"Segoe UI",system-ui,sans-serif}
-  main{max-width:680px;margin:40px auto;background:#fff;padding:32px 36px;border-radius:3px;box-shadow:0 0 10px rgba(9,30,66,.1)}
+  :root{--bg:#f7f8f9;--panel:#fff;--text:#172b4d;--muted:#626f86;--link:#0c66e4;color-scheme:light}
+  [data-theme="dark"]{--bg:#1d2125;--panel:#22272b;--text:#dee4ea;--muted:#8c9bab;--link:#579dff;color-scheme:dark}
+  body{margin:0;background:var(--bg);color:var(--text);font:400 15px/1.6 Inter,-apple-system,"Segoe UI",system-ui,sans-serif}
+  main{max-width:680px;margin:40px auto;background:var(--panel);padding:32px 36px;border-radius:3px;box-shadow:0 0 10px rgba(9,30,66,.1)}
   h1{font-size:24px;margin:0 0 4px} h2{font-size:16px;margin:24px 0 6px}
-  .sub{color:#626f86;font-size:13px;margin-bottom:20px} a{color:#0c66e4}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:20px} a{color:var(--link)}
   @media (max-width:720px){ main{margin:0;border-radius:0;padding:24px 20px} }
 </style>
 </head>
