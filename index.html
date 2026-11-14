@@ -190,6 +190,41 @@
   .modal-actions{display:flex;justify-content:space-between;gap:8px;margin-top:24px}
   .modal-actions .right{display:flex;gap:8px;margin-left:auto}
 
+  .toolbar .spacer{flex:1}
+  .btn.subtle-danger{background:transparent;color:var(--red)}
+  .btn.subtle-danger:hover{background:var(--red-bg)}
+
+  /* summary / earnings modal */
+  .modal.wide{max-width:760px}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+  .modal-head h3{margin:0}
+  .x-btn{width:32px;height:32px;border:none;border-radius:3px;background:transparent;color:var(--sub);display:grid;place-items:center;cursor:pointer}
+  .x-btn:hover{background:var(--gray-bg)}
+  .modal-sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .cur-tabs{display:inline-flex;background:var(--gray-bg);border-radius:3px;padding:2px;gap:2px;margin-bottom:16px}
+  .cur-tabs button{border:none;background:transparent;color:var(--sub);font-weight:500;font-size:13px;padding:5px 12px;border-radius:3px;cursor:pointer}
+  .cur-tabs button.on{background:var(--elevated);color:var(--text);box-shadow:var(--shadow)}
+  .kpis{display:flex;gap:28px;flex-wrap:wrap;margin-bottom:12px}
+  .chart-wrap{position:relative}
+  .chart-wrap svg{display:block;width:100%;height:auto;overflow:visible}
+  .chart-wrap .grid line{stroke:var(--border);stroke-width:1}
+  .chart-wrap .axis text{fill:var(--muted);font-size:11px;font-family:inherit}
+  .chart-wrap .bar{fill:var(--blue)}
+  .chart-wrap .bar.dim{opacity:.35}
+  .chart-wrap .hit{fill:transparent;cursor:default}
+  .chart-wrap .zero-line{stroke:var(--border-strong);stroke-width:1}
+  .chart-wrap .val{fill:var(--sub);font-size:11px;font-weight:600;font-family:inherit}
+  .tip{position:absolute;pointer-events:none;background:var(--toast-bg);color:var(--toast-text);font-size:12px;line-height:16px;padding:6px 8px;border-radius:3px;white-space:nowrap;transform:translate(-50%,-100%);margin-top:-8px;display:none;z-index:2}
+  .tip b{display:block;font-weight:600}
+  .chart-empty{border:1px dashed var(--border);border-radius:3px;padding:40px 16px;text-align:center;color:var(--muted)}
+  .chart-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .chart-foot .note{margin:0}
+  table.months{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+  table.months th,table.months td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+  table.months th{color:var(--muted);font-weight:600;font-size:12px}
+  table.months td.num,table.months th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .migrate{background:var(--amber-bg);color:var(--amber);border-radius:3px;padding:10px 12px;font-size:13px;margin-bottom:14px}
+
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--toast-bg);color:var(--toast-text);padding:10px 16px;border-radius:3px;font-size:13px;box-shadow:var(--shadow-raised);z-index:200;display:none;max-width:90vw}
   .toast.show{display:block}
 
@@ -291,6 +326,9 @@
       <select class="chip-select" id="paidFilter" aria-label="Payment filter">
         <option value="all">All payments</option><option value="unpaid">Not paid</option><option value="paid">Paid</option>
       </select>
+      <span class="spacer"></span>
+      <button class="btn default" id="summaryBtn" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Summary</button>
+      <button class="btn subtle-danger" id="resetBtn" type="button">Reset board</button>
     </div>
 
     <div class="summary">
@@ -380,13 +418,34 @@
   </form>
 </div>
 
+<!-- earnings summary modal -->
+<div class="scrim" id="summaryScrim">
+  <div class="modal wide" role="dialog" aria-labelledby="summaryTitle">
+    <div class="modal-head"><h3 id="summaryTitle">Earnings by month</h3>
+      <button class="x-btn" id="summaryClose" type="button" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <p class="modal-sub">Money from commissions marked <b>Done</b> and <b>Paid</b>, counted in the month they were completed. Last 12 months.</p>
+    <div class="migrate" id="migrateNote" hidden>To start tracking completion months, run <b>migrate-001-completed-at.sql</b> from your GitHub repo in Supabase’s SQL Editor, then reload.</div>
+    <div class="cur-tabs" id="curTabs" role="tablist" aria-label="Currency"></div>
+    <div class="kpis">
+      <div class="sum"><div class="k">This month</div><div class="v" id="kThis">—</div></div>
+      <div class="sum"><div class="k">Last 12 months</div><div class="v" id="kYear">—</div></div>
+      <div class="sum"><div class="k">Best month</div><div class="v" id="kBest">—</div></div>
+      <div class="sum"><div class="k">Jobs completed</div><div class="v" id="kJobs">0</div></div>
+    </div>
+    <div class="chart-wrap" id="chartWrap"><div class="tip" id="chartTip"></div></div>
+    <div class="chart-foot"><span class="note">Totals are kept separate per currency, not converted.</span>
+      <button class="btn subtle" id="tableToggle" type="button">Show as table</button></div>
+    <div id="monthTable" hidden></div>
+  </div>
+</div>
+
 <!-- confirm modal -->
 <div class="scrim" id="confirmScrim">
   <div class="modal small">
     <h3 id="confirmTitle">Delete this commission?</h3>
     <p id="confirmText" style="margin:0;color:var(--sub)">This can’t be undone.</p>
     <div class="field" id="confirmTypeWrap" hidden style="margin-top:16px">
-      <label for="confirmType">Type DELETE to confirm</label><input class="input" id="confirmType" autocomplete="off">
+      <label for="confirmType" id="confirmTypeLabel">Type DELETE to confirm</label><input class="input" id="confirmType" autocomplete="off">
     </div>
     <div class="modal-actions"><div class="right">
       <button type="button" class="btn subtle" id="confirmNo">Cancel</button>
@@ -430,6 +489,7 @@
   let cards = new Map();
   let filterText = "", filterPaid = "all";
   let recovering = false;
+  let hasCompletedCol = true;
 
   // ---------- small UI helpers ----------
   let toastTimer;
@@ -540,12 +600,14 @@
     const { data, error } = await sb.from("commissions").select("*").order("sort_order", { ascending: true });
     if(error){ console.error(error); return error; }
     cards = new Map(data.map(r => [r.id, fromRow(r)]));
+    if(data.length) hasCompletedCol = Object.prototype.hasOwnProperty.call(data[0], "completed_at");
     return null;
   }
   function fromRow(r){
     return { id:r.id, client:r.client||"", desc:r.description||"", deadline:r.deadline||"", price:Number(r.price)||0,
       currency: CURRENCIES[r.currency] ? r.currency : "USD", paid: r.paid ? "paid" : "unpaid",
-      status: STATUSES.includes(r.status) ? r.status : "commissioned", order: Number(r.sort_order)||0, created: Date.parse(r.created_at)||0 };
+      status: STATUSES.includes(r.status) ? r.status : "commissioned", order: Number(r.sort_order)||0, created: Date.parse(r.created_at)||0,
+      completedAt: r.completed_at ? Date.parse(r.completed_at) : null };
   }
   function toRow(c){
     return { client:c.client.slice(0,80), description:(c.desc||"").slice(0,1000), deadline:c.deadline||null,
@@ -566,13 +628,14 @@
     const { data, error } = await sb.from("commissions").insert(toRow(c)).select("*").single();
     cards.delete(tempId);
     if(error){ render(); toast("Couldn’t save: " + friendly(error)); return; }
-    cards.set(data.id, fromRow(data)); render();
+    cards.set(data.id, fromRow(data)); if(Object.prototype.hasOwnProperty.call(data, "completed_at")) hasCompletedCol = true; else hasCompletedCol = false; render();
   }
   async function updateCard(c){
     const prev = cards.get(c.id);
     cards.set(c.id, c); render();
-    const { error } = await sb.from("commissions").update(toRow(c)).eq("id", c.id);
-    if(error){ if(prev) cards.set(c.id, prev); render(); toast("Couldn’t save: " + friendly(error)); }
+    const { data, error } = await sb.from("commissions").update(toRow(c)).eq("id", c.id).select("*").maybeSingle();
+    if(error){ if(prev) cards.set(c.id, prev); render(); toast("Couldn’t save: " + friendly(error)); return; }
+    if(data && cards.has(c.id)){ cards.set(c.id, fromRow(data)); if(!drag) render(); }
   }
   async function deleteCards(ids){
     const removed = ids.map(id => cards.get(id)).filter(Boolean);
@@ -664,6 +727,7 @@
       }
       document.querySelector(`[data-count="${s}"]`).textContent = items.length===all.length ? all.length : items.length+" of "+all.length;
     }
+    if($("#summaryScrim").classList.contains("open")) renderSummary();
   }
 
   // ---------- toolbar ----------
@@ -775,14 +839,16 @@
   // ---------- confirm ----------
   let confirmAction = null;
   const confirmScrim = $("#confirmScrim");
-  function askConfirm({title, text, button="Delete", typeToConfirm=false, action}){
+  let confirmWord = "DELETE";
+  function askConfirm({title, text, button="Delete", typeToConfirm=false, typeWord="DELETE", action}){
+    confirmWord = typeWord; $("#confirmTypeLabel").textContent = "Type " + typeWord + " to confirm";
     $("#confirmTitle").textContent = title; $("#confirmText").textContent = text; $("#confirmYes").textContent = button;
     $("#confirmTypeWrap").hidden = !typeToConfirm; $("#confirmType").value = "";
     $("#confirmYes").disabled = typeToConfirm;
     confirmAction = action; confirmScrim.classList.add("open");
     (typeToConfirm ? $("#confirmType") : $("#confirmNo")).focus();
   }
-  $("#confirmType").addEventListener("input", e => { $("#confirmYes").disabled = e.target.value.trim().toUpperCase() !== "DELETE"; });
+  $("#confirmType").addEventListener("input", e => { $("#confirmYes").disabled = e.target.value.trim().toUpperCase() !== confirmWord; });
   function closeConfirm(){ confirmScrim.classList.remove("open"); confirmAction=null; }
   $("#confirmNo").addEventListener("click", closeConfirm);
   confirmScrim.addEventListener("pointerdown", e => { if(e.target===confirmScrim) closeConfirm(); });
@@ -805,7 +871,146 @@
         await sb.auth.signOut(); toast("Your account has been deleted.");
       }});
   }
-  document.addEventListener("keydown", e => { if(e.key==="Escape"){ closeEdit(); closeMenu(); closeConfirm(); settingsScrim.classList.remove("open"); } });
+  document.addEventListener("keydown", e => { if(e.key==="Escape"){ closeEdit(); closeMenu(); closeConfirm(); closeSummary(); settingsScrim.classList.remove("open"); } });
+
+  // ---------- reset board ----------
+  $("#resetBtn").addEventListener("click", () => {
+    const n = cards.size;
+    if(!n){ toast("Your board is already empty."); return; }
+    askConfirm({ title:"Reset your board?", text:`This deletes all ${n} commission${n===1?"":"s"} on your board, in every column, paid or not, and clears your earnings history. Your account and settings stay. This can’t be undone.`,
+      button:"Reset board", typeToConfirm:true, typeWord:"RESET", action: async () => {
+        const backup = cards; cards = new Map(); render();
+        const { error } = await sb.from("commissions").delete().eq("owner", user.id);
+        if(error){ cards = backup; render(); toast("Couldn’t reset: " + friendly(error)); return; }
+        toast("Board reset.");
+      }});
+  });
+
+  // ---------- earnings summary ----------
+  let summaryCur = null, showTable = false;
+  const summaryScrim = $("#summaryScrim");
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function lastMonths(n){
+    const out = [], now = new Date();
+    for(let i=n-1;i>=0;i--){ const d = new Date(now.getFullYear(), now.getMonth()-i, 1); out.push({ y:d.getFullYear(), m:d.getMonth(), key:d.getFullYear()+"-"+d.getMonth() }); }
+    return out;
+  }
+  function earned(){ return [...cards.values()].filter(c => c.status==="done" && c.paid==="paid" && c.completedAt); }
+  function niceMax(v){ if(v<=0) return 100; const p = Math.pow(10, Math.floor(Math.log10(v))); const f = v/p; return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p; }
+  function shortMoney(n, cur){ const sym = CURRENCIES[cur]||""; return n>=1000 ? sym + (Math.round(n/100)/10).toLocaleString("en-US") + "k" : fmtMoney(n, cur); }
+
+  function openSummary(){
+    const done = earned();
+    const curs = Object.keys(CURRENCIES).filter(k => done.some(c => c.currency===k));
+    if(!summaryCur || (curs.length && !curs.includes(summaryCur))) summaryCur = curs.includes(profile.default_currency) ? profile.default_currency : (curs[0] || profile.default_currency);
+    summaryScrim.classList.add("open"); renderSummary(); $("#summaryClose").focus();
+  }
+  function closeSummary(){ summaryScrim.classList.remove("open"); $("#chartTip").style.display="none"; }
+  $("#summaryBtn").addEventListener("click", openSummary);
+  $("#summaryClose").addEventListener("click", closeSummary);
+  summaryScrim.addEventListener("pointerdown", e => { if(e.target===summaryScrim) closeSummary(); });
+  $("#tableToggle").addEventListener("click", () => { showTable = !showTable; renderSummary(); });
+
+  function renderSummary(){
+    $("#migrateNote").hidden = hasCompletedCol;
+    const done = earned();
+    const curs = Object.keys(CURRENCIES).filter(k => done.some(c => c.currency===k));
+    const tabs = $("#curTabs"); tabs.replaceChildren();
+    const tabList = curs.length ? curs : [summaryCur];
+    tabList.forEach(k => { const b=document.createElement("button"); b.type="button"; b.role="tab"; b.textContent = k + " " + CURRENCIES[k];
+      b.className = k===summaryCur ? "on" : ""; b.setAttribute("aria-selected", k===summaryCur);
+      b.addEventListener("click", () => { summaryCur = k; renderSummary(); }); tabs.appendChild(b); });
+    tabs.hidden = tabList.length < 2;
+
+    const months = lastMonths(12);
+    const totals = Object.fromEntries(months.map(m => [m.key, {sum:0, jobs:0}]));
+    let jobs = 0;
+    done.filter(c => c.currency===summaryCur).forEach(c => { const d = new Date(c.completedAt); const k = d.getFullYear()+"-"+d.getMonth();
+      if(totals[k]){ totals[k].sum += Number(c.price)||0; totals[k].jobs++; jobs++; } });
+    const vals = months.map(m => Math.round(totals[m.key].sum*100)/100);
+    const yearTotal = vals.reduce((a,b)=>a+b,0);
+    const bestIdx = vals.reduce((bi,v,i)=> v>vals[bi] ? i : bi, 0);
+    $("#kThis").textContent = fmtMoney(vals[vals.length-1], summaryCur);
+    $("#kYear").textContent = fmtMoney(yearTotal, summaryCur);
+    $("#kBest").textContent = vals[bestIdx] > 0 ? MONTHS[months[bestIdx].m] + " · " + fmtMoney(vals[bestIdx], summaryCur) : "—";
+    $("#kJobs").textContent = jobs;
+
+    const wrap = $("#chartWrap"), tip = $("#chartTip");
+    wrap.querySelectorAll("svg, .chart-empty").forEach(n => n.remove());
+    tip.style.display = "none";
+    if(yearTotal <= 0){
+      const e = document.createElement("div"); e.className = "chart-empty";
+      e.textContent = "No earnings yet. Move a card to Done and mark it Paid, and it’ll show up here.";
+      wrap.appendChild(e);
+    } else {
+      wrap.appendChild(drawChart(months, vals, totals, summaryCur));
+    }
+
+    // table view
+    $("#tableToggle").textContent = showTable ? "Hide table" : "Show as table";
+    const tw = $("#monthTable"); tw.hidden = !showTable;
+    if(showTable){
+      const t = document.createElement("table"); t.className = "months";
+      t.innerHTML = '<thead><tr><th>Month</th><th class="num">Jobs</th><th class="num">Earned</th></tr></thead>';
+      const tb = document.createElement("tbody");
+      months.slice().reverse().forEach(m => { const tr = document.createElement("tr");
+        [MONTHS[m.m] + " " + m.y, String(totals[m.key].jobs), fmtMoney(totals[m.key].sum, summaryCur)].forEach((txt,i) => { const td=document.createElement("td"); td.textContent = txt; if(i) td.className="num"; tr.appendChild(td); });
+        tb.appendChild(tr); });
+      t.appendChild(tb); tw.replaceChildren(t);
+    }
+  }
+
+  function drawChart(months, vals, totals, cur){
+    const NS = "http://www.w3.org/2000/svg";
+    const W = 700, H = 260, L = 52, R = 8, T = 18, B = 34;
+    const pw = W-L-R, ph = H-T-B;
+    const max = niceMax(Math.max(...vals));
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role","img");
+    svg.setAttribute("aria-label", "Bar chart of earnings per month in " + cur + " for the last 12 months");
+    const el = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag); for(const k in attrs) n.setAttribute(k, attrs[k]); (parent||svg).appendChild(n); return n; };
+    // grid + y axis
+    const grid = el("g", {class:"grid"}), axis = el("g", {class:"axis"});
+    for(let i=0;i<=4;i++){
+      const v = max*i/4, y = T + ph - ph*i/4;
+      if(i>0) el("line", {x1:L, x2:W-R, y1:y, y2:y}, grid);
+      const t = el("text", {x:L-8, y:y+4, "text-anchor":"end"}, axis); t.textContent = shortMoney(v, cur);
+    }
+    el("line", {class:"zero-line", x1:L, x2:W-R, y1:T+ph, y2:T+ph});
+    // bars
+    const slot = pw / months.length, bw = Math.min(36, slot*0.6);
+    const bars = [];
+    months.forEach((m, i) => {
+      const cx = L + slot*i + slot/2, v = vals[i];
+      const h = v>0 ? Math.max(2, ph * v / max) : 0, y = T + ph - h, x = cx - bw/2, r = Math.min(4, bw/2, h);
+      let bar = null;
+      if(h > 0){
+        // rounded top corners, square base on the axis
+        bar = el("path", {class:"bar", d:`M${x},${T+ph} V${y+r} Q${x},${y} ${x+r},${y} H${x+bw-r} Q${x+bw},${y} ${x+bw},${y+r} V${T+ph} Z`});
+      }
+      bars.push(bar);
+      const lab = el("text", {x:cx, y:H-B+18, "text-anchor":"middle"}, axis);
+      lab.textContent = MONTHS[m.m] + (m.m===0 || i===0 ? " ’" + String(m.y).slice(2) : "");
+      // hit target: whole column
+      const hit = el("rect", {class:"hit", x:L+slot*i, y:T, width:slot, height:ph+B});
+      const show = () => {
+        bars.forEach((b,j) => b && b.classList.toggle("dim", j!==i));
+        const wrapW = svg.getBoundingClientRect().width, scale = wrapW / W;
+        const tip = $("#chartTip");
+        const j = totals[m.key].jobs;
+        tip.innerHTML = ""; const b = document.createElement("b"); b.textContent = MONTHS[m.m] + " " + m.y; tip.appendChild(b);
+        tip.append(fmtMoney(v, cur) + " · " + j + " job" + (j===1?"":"s"));
+        tip.style.left = (cx*scale) + "px"; tip.style.top = ((v>0 ? y : T+ph)*scale) + "px"; tip.style.display = "block";
+      };
+      const hide = () => { bars.forEach(b => b && b.classList.remove("dim")); $("#chartTip").style.display = "none"; };
+      hit.addEventListener("pointerenter", show); hit.addEventListener("pointerdown", show); hit.addEventListener("pointerleave", hide);
+    });
+    // label only the best month's value directly
+    const bi = vals.reduce((b,v,i)=> v>vals[b] ? i : b, 0);
+    if(vals[bi] > 0){ const cx = L + slot*bi + slot/2, y = T + ph - ph*vals[bi]/max;
+      const t = el("text", {class:"val", x:cx, y:y-6, "text-anchor":"middle"}); t.textContent = shortMoney(vals[bi], cur); }
+    return svg;
+  }
 
   // ---------- import cards saved in this browser by the old version ----------
   function oldLocalCards(){ try{ const raw = localStorage.getItem(OLD_LS_KEY); const arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr.filter(c=>c && c.client) : []; }catch(e){ return []; } }
