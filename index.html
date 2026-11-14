@@ -423,12 +423,12 @@
   <div class="modal wide" role="dialog" aria-labelledby="summaryTitle">
     <div class="modal-head"><h3 id="summaryTitle">Earnings by month</h3>
       <button class="x-btn" id="summaryClose" type="button" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
-    <p class="modal-sub">Money from commissions marked <b>Done</b> and <b>Paid</b>, counted in the month they were completed. Last 12 months.</p>
+    <p class="modal-sub">Money from commissions marked <b>Done</b> and <b>Paid</b>, counted in the month they were completed. Since November 2026.</p>
     <div class="migrate" id="migrateNote" hidden>To start tracking completion months, run <b>migrate-001-completed-at.sql</b> from your GitHub repo in Supabase’s SQL Editor, then reload.</div>
     <div class="cur-tabs" id="curTabs" role="tablist" aria-label="Currency"></div>
     <div class="kpis">
       <div class="sum"><div class="k">This month</div><div class="v" id="kThis">—</div></div>
-      <div class="sum"><div class="k">Last 12 months</div><div class="v" id="kYear">—</div></div>
+      <div class="sum"><div class="k">Since Nov 2026</div><div class="v" id="kYear">—</div></div>
       <div class="sum"><div class="k">Best month</div><div class="v" id="kBest">—</div></div>
       <div class="sum"><div class="k">Jobs completed</div><div class="v" id="kJobs">0</div></div>
     </div>
@@ -888,14 +888,23 @@
 
   // ---------- earnings summary ----------
   let summaryCur = null, showTable = false;
+  const CHART_START = { y:2026, m:10 };
   const summaryScrim = $("#summaryScrim");
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  function lastMonths(n){
+  // The chart starts at November 2026 and always shows at least 12 months (Nov 2026 – Oct 2027),
+  // then keeps growing month by month after that.
+  function chartMonths(){
     const out = [], now = new Date();
-    for(let i=n-1;i>=0;i--){ const d = new Date(now.getFullYear(), now.getMonth()-i, 1); out.push({ y:d.getFullYear(), m:d.getMonth(), key:d.getFullYear()+"-"+d.getMonth() }); }
+    const first = new Date(CHART_START.y, CHART_START.m, 1);
+    const minEnd = new Date(CHART_START.y, CHART_START.m + 11, 1);
+    const curr = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = curr > minEnd ? curr : minEnd;
+    for(let d = new Date(first); d <= end; d = new Date(d.getFullYear(), d.getMonth()+1, 1))
+      out.push({ y:d.getFullYear(), m:d.getMonth(), key:d.getFullYear()+"-"+d.getMonth(), future: d > curr });
     return out;
   }
-  function earned(){ return [...cards.values()].filter(c => c.status==="done" && c.paid==="paid" && c.completedAt); }
+  function earned(){ const start = new Date(CHART_START.y, CHART_START.m, 1).getTime();
+    return [...cards.values()].filter(c => c.status==="done" && c.paid==="paid" && c.completedAt && c.completedAt >= start); }
   function niceMax(v){ if(v<=0) return 100; const p = Math.pow(10, Math.floor(Math.log10(v))); const f = v/p; return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p; }
   function shortMoney(n, cur){ const sym = CURRENCIES[cur]||""; return n>=1000 ? sym + (Math.round(n/100)/10).toLocaleString("en-US") + "k" : fmtMoney(n, cur); }
 
@@ -922,7 +931,7 @@
       b.addEventListener("click", () => { summaryCur = k; renderSummary(); }); tabs.appendChild(b); });
     tabs.hidden = tabList.length < 2;
 
-    const months = lastMonths(12);
+    const months = chartMonths();
     const totals = Object.fromEntries(months.map(m => [m.key, {sum:0, jobs:0}]));
     let jobs = 0;
     done.filter(c => c.currency===summaryCur).forEach(c => { const d = new Date(c.completedAt); const k = d.getFullYear()+"-"+d.getMonth();
@@ -930,7 +939,8 @@
     const vals = months.map(m => Math.round(totals[m.key].sum*100)/100);
     const yearTotal = vals.reduce((a,b)=>a+b,0);
     const bestIdx = vals.reduce((bi,v,i)=> v>vals[bi] ? i : bi, 0);
-    $("#kThis").textContent = fmtMoney(vals[vals.length-1], summaryCur);
+    const nowKey = new Date().getFullYear()+"-"+new Date().getMonth();
+    $("#kThis").textContent = fmtMoney(totals[nowKey] ? totals[nowKey].sum : 0, summaryCur);
     $("#kYear").textContent = fmtMoney(yearTotal, summaryCur);
     $("#kBest").textContent = vals[bestIdx] > 0 ? MONTHS[months[bestIdx].m] + " · " + fmtMoney(vals[bestIdx], summaryCur) : "—";
     $("#kJobs").textContent = jobs;
@@ -953,7 +963,7 @@
       const t = document.createElement("table"); t.className = "months";
       t.innerHTML = '<thead><tr><th>Month</th><th class="num">Jobs</th><th class="num">Earned</th></tr></thead>';
       const tb = document.createElement("tbody");
-      months.slice().reverse().forEach(m => { const tr = document.createElement("tr");
+      months.filter(m => !m.future).reverse().forEach(m => { const tr = document.createElement("tr");
         [MONTHS[m.m] + " " + m.y, String(totals[m.key].jobs), fmtMoney(totals[m.key].sum, summaryCur)].forEach((txt,i) => { const td=document.createElement("td"); td.textContent = txt; if(i) td.className="num"; tr.appendChild(td); });
         tb.appendChild(tr); });
       t.appendChild(tb); tw.replaceChildren(t);
@@ -967,7 +977,7 @@
     const max = niceMax(Math.max(...vals));
     const svg = document.createElementNS(NS, "svg");
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role","img");
-    svg.setAttribute("aria-label", "Bar chart of earnings per month in " + cur + " for the last 12 months");
+    svg.setAttribute("aria-label", "Bar chart of earnings per month in " + cur + " since November 2026");
     const el = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag); for(const k in attrs) n.setAttribute(k, attrs[k]); (parent||svg).appendChild(n); return n; };
     // grid + y axis
     const grid = el("g", {class:"grid"}), axis = el("g", {class:"axis"});
@@ -991,6 +1001,7 @@
       bars.push(bar);
       const lab = el("text", {x:cx, y:H-B+18, "text-anchor":"middle"}, axis);
       lab.textContent = MONTHS[m.m] + (m.m===0 || i===0 ? " ’" + String(m.y).slice(2) : "");
+      if(m.future) lab.setAttribute("opacity", "0.55");
       // hit target: whole column
       const hit = el("rect", {class:"hit", x:L+slot*i, y:T, width:slot, height:ph+B});
       const show = () => {
