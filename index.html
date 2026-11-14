@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arieldzns Commission Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff; --surface:#f7f8f9; --col:#f1f2f4; --card:#ffffff;
+    --text:#172b4d; --sub:#44546f; --muted:#626f86; --border:#dcdfe4; --border-strong:#8590a2;
+    --blue:#0c66e4; --blue-hover:#0055cc; --blue-bg:#e9f2ff;
+    --red:#ae2e24; --red-bg:#ffeceb; --green:#216e4e; --green-bg:#dcfff1; --amber:#a54800; --amber-bg:#fff3eb; --gray-bg:#f1f2f4;
+    --shadow:0 1px 1px rgba(9,30,66,.25), 0 0 1px rgba(9,30,66,.31);
+    --shadow-raised:0 8px 12px rgba(9,30,66,.15), 0 0 1px rgba(9,30,66,.31);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font:400 14px/20px Inter,-apple-system,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  button,input,select,textarea{font:inherit;color:inherit}
+
+  /* top bar */
+  .topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 20px;background:#fff;position:sticky;top:0;z-index:20}
+  .logo{width:28px;height:28px;border-radius:6px;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+  .crumb{color:var(--muted);font-size:14px}
+  .crumb b{color:var(--text);font-weight:600}
+  .spacer{flex:1}
+
+  .page{padding:20px 24px 40px;max-width:1440px;margin:0 auto}
+  .title-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  h1{font-size:24px;line-height:28px;font-weight:600;margin:0;letter-spacing:-.01em}
+  .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .search{position:relative}
+  .search input{width:220px;height:32px;border:1px solid var(--border-strong);border-radius:3px;padding:0 10px 0 32px;background:#fff}
+  .search input:focus{outline:none;border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
+  .search svg{position:absolute;left:9px;top:8px;color:var(--muted)}
+  .chip-select{height:32px;border:1px solid var(--border);border-radius:3px;background:#fff;padding:0 28px 0 10px;font-weight:500;color:var(--sub);appearance:none;-webkit-appearance:none;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2344546f' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+  .chip-select:hover{background-color:var(--gray-bg)}
+  .tb-label{color:var(--muted);font-size:12px;font-weight:600;margin-left:4px}
+
+  .btn{height:32px;padding:0 12px;border-radius:3px;border:none;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .btn.primary{background:var(--blue);color:#fff}
+  .btn.primary:hover{background:var(--blue-hover)}
+  .btn.subtle{background:transparent;color:var(--sub)}
+  .btn.subtle:hover{background:var(--gray-bg)}
+  .btn.default{background:var(--gray-bg);color:var(--sub)}
+  .btn.default:hover{background:#dcdfe4}
+  .btn.danger{background:#c9372c;color:#fff}
+  .btn.danger:hover{background:#ae2e24}
+
+  /* summary */
+  .summary{display:flex;gap:28px;flex-wrap:wrap;padding:12px 16px;border:1px solid var(--border);border-radius:3px;margin-bottom:16px;background:#fff}
+  .sum .k{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .sum .v{font-size:18px;font-weight:600;margin-top:2px;line-height:24px}
+  .sum .v.red{color:var(--red)}
+  .sum .v.small{font-size:15px}
+
+  /* board */
+  .board{display:grid;grid-template-columns:repeat(3,minmax(260px,1fr));gap:8px;align-items:start}
+  .col{background:var(--col);border-radius:6px;padding:4px 4px 8px;min-height:65vh;display:flex;flex-direction:column;transition:background .12s}
+  .col.over{background:#e9f2ff}
+  .col-head{display:flex;align-items:center;gap:8px;padding:10px 10px 8px;min-height:40px}
+  .col-head h2{font-size:12px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.03em;margin:0}
+  .count{font-size:12px;color:var(--muted);font-weight:500}
+  .col-tool{margin-left:auto;font-size:12px;font-weight:500;color:var(--sub);background:none;border:none;padding:4px 6px;border-radius:3px;cursor:pointer}
+  .col-tool:hover{background:#dcdfe4}
+  .list{display:flex;flex-direction:column;gap:4px;flex:1;padding:0 2px}
+  .empty{color:var(--muted);text-align:center;padding:20px 8px;font-size:13px}
+  .add-inline{margin:4px 2px 0;text-align:left;justify-content:flex-start;color:var(--sub)}
+
+  .card{position:relative;background:var(--card);border-radius:3px;box-shadow:var(--shadow);padding:10px 12px 8px;cursor:pointer;user-select:none;transition:background .1s}
+  .card:hover{background:#f7f8f9}
+  .card:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+  .card.dragging{opacity:.3}
+  .summary-text{font-size:14px;line-height:20px;color:var(--text);word-break:break-word;margin-right:22px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .summary-text.placeholder{color:var(--muted);font-style:italic}
+  .meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .lozenge{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border-radius:3px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;border:none}
+  .lz-gray{background:var(--gray-bg);color:var(--sub)}
+  .lz-red{background:var(--red-bg);color:var(--red)}
+  .lz-amber{background:var(--amber-bg);color:var(--amber)}
+  .lz-green{background:var(--green-bg);color:var(--green)}
+  button.lozenge{cursor:pointer}
+  button.lozenge:hover{filter:brightness(.95)}
+  .date{font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border-radius:3px;color:var(--sub);background:transparent}
+  .date.late{background:var(--red-bg);color:var(--red)}
+  .date.soon{background:var(--amber-bg);color:var(--amber)}
+  .footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:8px}
+  .client{display:flex;align-items:center;gap:6px;min-width:0}
+  .avatar{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:10px;font-weight:700;flex:none}
+  .client-name{font-size:12px;font-weight:500;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .price{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap}
+  .more{position:absolute;top:6px;right:6px;width:24px;height:24px;border:none;border-radius:3px;background:transparent;color:var(--sub);display:grid;place-items:center;cursor:pointer;opacity:0}
+  .card:hover .more,.card:focus-within .more{opacity:1}
+  .more:hover{background:#dcdfe4}
+  .ghost-card{position:fixed;pointer-events:none;z-index:50;transform:rotate(2deg);box-shadow:var(--shadow-raised)}
+  .slot{border-radius:3px;background:#dcdfe4;opacity:.7}
+
+  /* menu */
+  .menu{position:fixed;z-index:60;background:#fff;border-radius:3px;box-shadow:var(--shadow-raised);padding:4px 0;min-width:180px;display:none}
+  .menu.open{display:block}
+  .menu button{display:flex;width:100%;text-align:left;padding:7px 14px;background:none;border:none;cursor:pointer;color:var(--text);gap:8px;align-items:center}
+  .menu button:hover{background:var(--gray-bg)}
+  .menu .sep{height:1px;background:var(--border);margin:4px 0}
+  .menu .dangerous{color:var(--red)}
+  .menu .cur{color:var(--blue);font-weight:600}
+
+  .note{color:var(--muted);font-size:12px;margin-top:14px}
+  .note.warn{color:var(--amber)}
+
+  /* modal */
+  .scrim{position:fixed;inset:0;background:rgba(9,30,66,.54);display:none;align-items:flex-start;justify-content:center;padding:60px 16px;z-index:100;overflow:auto}
+  .scrim.open{display:flex}
+  .modal{background:#fff;border-radius:3px;box-shadow:var(--shadow-raised);width:100%;max-width:560px;padding:24px}
+  .modal.small{max-width:400px}
+  .modal h3{font-size:20px;font-weight:600;margin:0 0 20px;line-height:24px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--sub);margin-bottom:4px}
+  .field label .req{color:var(--red)}
+  .input{width:100%;height:36px;border:1px solid var(--border-strong);border-radius:3px;padding:0 8px;background:#fff}
+  textarea.input{height:auto;min-height:88px;padding:8px;resize:vertical;line-height:20px}
+  .input:hover{background:var(--surface)}
+  .input:focus{outline:none;border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue);background:#fff}
+  select.input{appearance:none;-webkit-appearance:none;padding-right:28px;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2344546f' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .price-group{display:flex}
+  .price-group select{width:84px;border-radius:3px 0 0 3px;border-right:none}
+  .price-group input{border-radius:0 3px 3px 0}
+  .seg{display:flex;gap:4px}
+  .seg button{flex:1;height:36px;border-radius:3px;border:1px solid var(--border);background:#fff;font-weight:500;cursor:pointer;color:var(--sub)}
+  .seg button:hover{background:var(--surface)}
+  .seg button.on[data-v="unpaid"]{background:var(--red-bg);border-color:var(--red);color:var(--red)}
+  .seg button.on[data-v="paid"]{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+  .err{color:var(--red);font-size:12px;margin-top:4px;display:none}
+  .modal-actions{display:flex;justify-content:space-between;gap:8px;margin-top:24px}
+  .modal-actions .right{display:flex;gap:8px;margin-left:auto}
+
+  @media (max-width:860px){
+    .board{grid-template-columns:1fr}
+    .col{min-height:auto}
+    .search input{width:160px}
+    .grid2{grid-template-columns:1fr}
+  }
+  @media (hover:none){ .more{opacity:1} }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">A</div>
+  <div class="crumb">Arieldzns / <b>Commissions</b></div>
+  <div class="spacer"></div>
+  <button class="btn primary" id="addBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Create</button>
+</div>
+
+<main class="page">
+  <div class="title-row"><h1>Commission board</h1></div>
+
+  <div class="toolbar">
+    <div class="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="search" type="search" placeholder="Search board" aria-label="Search board">
+    </div>
+    <select class="chip-select" id="paidFilter" aria-label="Payment filter">
+      <option value="all">All payments</option><option value="unpaid">Not paid</option><option value="paid">Paid</option>
+    </select>
+    <span class="tb-label">Default currency</span>
+    <select class="chip-select" id="defaultCur" aria-label="Default currency">
+      <option value="USD">USD $</option><option value="EUR">EUR €</option><option value="GBP">GBP £</option>
+    </select>
+  </div>
+
+  <div class="summary">
+    <div class="sum"><div class="k">Still owed</div><div class="v red" id="sOwed">—</div></div>
+    <div class="sum"><div class="k">Paid</div><div class="v" id="sPaid">—</div></div>
+    <div class="sum"><div class="k">Active</div><div class="v" id="sActive">0</div></div>
+    <div class="sum"><div class="k">Overdue</div><div class="v" id="sOver">0</div></div>
+  </div>
+
+  <div class="board" id="board">
+    <section class="col" data-status="commissioned">
+      <div class="col-head"><h2>Commissioned</h2><span class="count" data-count="commissioned">0</span></div>
+      <div class="list" data-list="commissioned"></div>
+      <button class="btn subtle add-inline" data-add="commissioned">+ Create</button>
+    </section>
+    <section class="col" data-status="progress">
+      <div class="col-head"><h2>In progress</h2><span class="count" data-count="progress">0</span></div>
+      <div class="list" data-list="progress"></div>
+      <button class="btn subtle add-inline" data-add="progress">+ Create</button>
+    </section>
+    <section class="col" data-status="done">
+      <div class="col-head"><h2>Done</h2><span class="count" data-count="done">0</span>
+        <button class="col-tool" id="clearDone" title="Delete every paid card in Done">Clear paid</button></div>
+      <div class="list" data-list="done"></div>
+    </section>
+  </div>
+  <div class="note" id="note">Loading your board…</div>
+</main>
+
+<!-- card menu -->
+<div class="menu" id="menu"></div>
+
+<!-- edit modal -->
+<div class="scrim" id="editScrim">
+  <form class="modal" id="editForm" autocomplete="off">
+    <h3 id="editTitle">Create commission</h3>
+    <div class="field">
+      <label for="fClient">Client <span class="req">*</span></label>
+      <input class="input" id="fClient" maxlength="80" placeholder="Channel or client name">
+      <div class="err" id="clientErr">Client is required.</div>
+    </div>
+    <div class="field">
+      <label for="fDesc">Thumbnail description</label>
+      <textarea class="input" id="fDesc" maxlength="1000" placeholder="What the thumbnail is for, the idea, references…"></textarea>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="fDeadline">Deadline</label><input class="input" id="fDeadline" type="date"></div>
+      <div class="field"><label for="fPrice">Price</label>
+        <div class="price-group">
+          <select class="input" id="fCur" aria-label="Currency"><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option></select>
+          <input class="input" id="fPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0">
+        </div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Payment</label>
+        <div class="seg" id="fPaid"><button type="button" data-v="unpaid">Not paid</button><button type="button" data-v="paid">Paid</button></div>
+      </div>
+      <div class="field"><label for="fStatus">Status</label>
+        <select class="input" id="fStatus"><option value="commissioned">Commissioned</option><option value="progress">In progress</option><option value="done">Done</option></select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn subtle" id="editDelete" style="color:var(--red)">Delete</button>
+      <div class="right">
+        <button type="button" class="btn subtle" id="editCancel">Cancel</button>
+        <button type="submit" class="btn primary" id="editSave">Create</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- confirm modal -->
+<div class="scrim" id="confirmScrim">
+  <div class="modal small">
+    <h3 id="confirmTitle">Delete this commission?</h3>
+    <p id="confirmText" style="margin:0;color:var(--sub)">This can’t be undone.</p>
+    <div class="modal-actions"><div class="right">
+      <button type="button" class="btn subtle" id="confirmNo">Cancel</button>
+      <button type="button" class="btn danger" id="confirmYes">Delete</button>
+    </div></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const STATUSES = ["commissioned","progress","done"];
+  const STATUS_LABEL = {commissioned:"Commissioned", progress:"In progress", done:"Done"};
+  const CURRENCIES = {USD:"$", EUR:"€", GBP:"£"};
+  const LS_KEY = "arieldzns-board-v1", LS_SET = "arieldzns-board-settings";
+  let cards = new Map();
+  let settings = { defaultCurrency: "USD" };
+  let db = null, col = null, settingsRef = null;
+  let canWrite = true;
+  let filterText = "", filterPaid = "all";
+  const $ = s => document.querySelector(s);
+  const note = $("#note");
+
+  // ---------- storage ----------
+  function lsLoad(){ try{ const raw = localStorage.getItem(LS_KEY); if(raw) JSON.parse(raw).forEach(c=>cards.set(c.id,{...clean(c), id:c.id})); const s=localStorage.getItem(LS_SET); if(s) settings={...settings,...JSON.parse(s)}; }catch(e){} }
+  function lsSave(){ try{ localStorage.setItem(LS_KEY, JSON.stringify([...cards.values()])); localStorage.setItem(LS_SET, JSON.stringify(settings)); }catch(e){} }
+  function newId(){ return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function validCur(c){ return CURRENCIES[c] ? c : null; }
+
+  async function saveCard(c){
+    cards.set(c.id, c); render();
+    if(col){ try{ await col.doc(c.id).set(clean(c)); }catch(e){ handleWriteError(e); } } else lsSave();
+  }
+  async function removeCard(id){
+    cards.delete(id); render();
+    if(col){ try{ await col.doc(id).delete(); }catch(e){ handleWriteError(e); } } else lsSave();
+  }
+  async function saveSettings(){
+    if(settingsRef){ try{ await settingsRef.set({defaultCurrency: settings.defaultCurrency}); }catch(e){ handleWriteError(e); } } else lsSave();
+  }
+  function clean(c){
+    return { client:String(c.client||""), desc:String(c.desc||""), deadline:String(c.deadline||""),
+      price:Number(c.price)||0, currency: validCur(c.currency) || "EUR", paid:c.paid==="paid"?"paid":"unpaid",
+      status:STATUSES.includes(c.status)?c.status:"commissioned", order:Number(c.order)||0, created:Number(c.created)||Date.now() };
+  }
+  function handleWriteError(e){
+    if(e && e.code === "invalid_argument"){ canWrite = false; note.textContent = "You can view this board but not change it."; note.className="note warn"; }
+    else if(e && e.code === "quota_exceeded"){ note.textContent = "The board is full. Delete some old cards to add more."; note.className="note warn"; }
+    else { note.textContent = "Couldn’t save that change. Check your connection and try again."; note.className="note warn"; }
+  }
+
+  // ---------- helpers ----------
+  function fmtMoney(n, cur){ const v = Math.round((Number(n)||0)*100)/100;
+    return (CURRENCIES[cur]||"") + v.toLocaleString("en-US",{minimumFractionDigits: v%1?2:0, maximumFractionDigits:2}); }
+  function daysUntil(ds){ if(!ds) return null; const [y,m,d]=ds.split("-").map(Number); if(!y) return null;
+    const t=new Date(); return Math.round((Date.UTC(y,m-1,d)-Date.UTC(t.getFullYear(),t.getMonth(),t.getDate()))/86400000); }
+  function fmtDate(ds){ const [y,m,d]=ds.split("-").map(Number); if(!y) return "";
+    const dt=new Date(y,m-1,d); const opts={day:"numeric",month:"short"}; if(y!==new Date().getFullYear()) opts.year="numeric";
+    return dt.toLocaleDateString("en-GB",opts); }
+  function sorted(status){ return [...cards.values()].filter(c=>c.status===status).sort((a,b)=>(a.order-b.order)||(a.created-b.created)); }
+  function matches(c){
+    if(filterPaid!=="all" && c.paid!==filterPaid) return false;
+    if(!filterText) return true;
+    return (c.client+" "+c.desc).toLowerCase().includes(filterText);
+  }
+  const AV_COLORS = ["#0c66e4","#6e5dc6","#1f845a","#c9372c","#a54800","#227d9b","#943d73","#5b7f24"];
+  function initials(name){ const p=name.trim().split(/\s+/).filter(Boolean); if(!p.length) return "?"; return (p[0][0]+(p[1]?p[1][0]:(p[0][1]||""))).toUpperCase(); }
+  function avColor(name){ let h=0; for(const ch of name) h=(h*31+ch.charCodeAt(0))>>>0; return AV_COLORS[h%AV_COLORS.length]; }
+  function totalsText(obj){ const parts = Object.keys(CURRENCIES).filter(k=>obj[k]).map(k=>fmtMoney(obj[k],k)); return parts.length ? parts.join(" · ") : fmtMoney(0, settings.defaultCurrency); }
+
+  // ---------- render ----------
+  const ICON_CAL = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+  const ICON_MORE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+
+  function cardEl(c){
+    const el = document.createElement("article");
+    el.className = "card"; el.dataset.id = c.id; el.tabIndex = 0;
+    el.innerHTML = `<button class="more" title="More actions" aria-label="More actions">${ICON_MORE}</button>
+      <div class="summary-text"></div>
+      <div class="meta"></div>
+      <div class="footer"><div class="client"><div class="avatar"></div><span class="client-name"></span></div><span class="price"></span></div>`;
+    const st = el.querySelector(".summary-text");
+    if(c.desc) st.textContent = c.desc; else { st.textContent = "No description"; st.classList.add("placeholder"); }
+
+    const meta = el.querySelector(".meta");
+    const paid = document.createElement("button");
+    paid.className = "lozenge paid " + (c.paid==="paid" ? "lz-green" : "lz-red");
+    paid.textContent = c.paid==="paid" ? "Paid" : "Not paid";
+    paid.title = c.paid==="paid" ? "Mark as not paid" : "Mark as paid";
+    meta.appendChild(paid);
+    if(c.deadline){
+      const d = document.createElement("span"); d.className="date";
+      const n = daysUntil(c.deadline);
+      d.innerHTML = ICON_CAL; d.append(" " + fmtDate(c.deadline));
+      if(c.status!=="done" && n!==null){
+        if(n<0){ d.classList.add("late"); d.title="Overdue by "+(-n)+" day"+(n===-1?"":"s"); }
+        else if(n<=2){ d.classList.add("soon"); d.title = n===0?"Due today":"Due in "+n+" day"+(n===1?"":"s"); }
+        else d.title = "Due in "+n+" days";
+      }
+      meta.appendChild(d);
+    }
+    const name = c.client || "Untitled client";
+    const av = el.querySelector(".avatar"); av.textContent = initials(name); av.style.background = avColor(name);
+    el.querySelector(".client-name").textContent = name;
+    el.querySelector(".price").textContent = fmtMoney(c.price, c.currency);
+    return el;
+  }
+
+  function render(){
+    const owed={}, paid={}; let active=0, over=0;
+    for(const c of cards.values()){
+      const bucket = c.paid==="paid" ? paid : owed;
+      bucket[c.currency] = (bucket[c.currency]||0) + (Number(c.price)||0);
+      if(c.status!=="done"){ active++; const n=daysUntil(c.deadline); if(n!==null && n<0) over++; }
+    }
+    const ot = totalsText(owed), pt = totalsText(paid);
+    $("#sOwed").textContent = ot; $("#sOwed").classList.toggle("small", ot.includes("·"));
+    $("#sPaid").textContent = pt; $("#sPaid").classList.toggle("small", pt.includes("·"));
+    $("#sActive").textContent = active; $("#sOver").textContent = over;
+    $("#sOver").classList.toggle("red", over>0);
+    $("#defaultCur").value = settings.defaultCurrency;
+    for(const s of STATUSES){
+      const list = document.querySelector(`[data-list="${s}"]`);
+      const all = sorted(s), items = all.filter(matches);
+      list.replaceChildren(...items.map(cardEl));
+      if(!items.length){
+        const e=document.createElement("div"); e.className="empty";
+        e.textContent = all.length ? "No matching cards" : (s==="commissioned" ? "No commissions yet" : "Drag cards here");
+        list.appendChild(e);
+      }
+      const cnt = document.querySelector(`[data-count="${s}"]`);
+      cnt.textContent = items.length===all.length ? all.length : items.length+" of "+all.length;
+    }
+  }
+
+  // ---------- toolbar ----------
+  $("#search").addEventListener("input", e => { filterText = e.target.value.trim().toLowerCase(); render(); });
+  $("#paidFilter").addEventListener("change", e => { filterPaid = e.target.value; render(); });
+  $("#defaultCur").addEventListener("change", e => {
+    if(!canWrite){ e.target.value = settings.defaultCurrency; return; }
+    settings.defaultCurrency = e.target.value; render(); saveSettings();
+  });
+
+  // ---------- card interactions ----------
+  const menu = $("#menu");
+  function closeMenu(){ menu.classList.remove("open"); }
+  function openMenu(c, anchor){
+    if(!canWrite) return;
+    menu.innerHTML = "";
+    const add = (label, fn, cls) => { const b=document.createElement("button"); b.textContent=label; if(cls) b.className=cls; b.addEventListener("click",()=>{closeMenu(); fn();}); menu.appendChild(b); };
+    const sep = () => { const d=document.createElement("div"); d.className="sep"; menu.appendChild(d); };
+    add("Edit", ()=>openEdit(c));
+    add(c.paid==="paid" ? "Mark as not paid" : "Mark as paid", ()=>saveCard({...c, paid:c.paid==="paid"?"unpaid":"paid"}));
+    sep();
+    for(const s of STATUSES){ if(s===c.status) continue; add("Move to " + STATUS_LABEL[s], ()=>moveTo(c, s)); }
+    sep();
+    add("Delete", ()=>askDelete([c.id], "Delete this commission?", `“${c.client || "Untitled"}” will be removed from the board. This can’t be undone.`), "dangerous");
+    const r = anchor.getBoundingClientRect();
+    menu.classList.add("open");
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    menu.style.left = Math.max(8, Math.min(r.right - mw, innerWidth - mw - 8)) + "px";
+    menu.style.top = (r.bottom + 4 + mh > innerHeight ? r.top - mh - 4 : r.bottom + 4) + "px";
+  }
+  function moveTo(c, status){ const list = sorted(status); const order = list.length ? list[list.length-1].order + 1000 : 1000; saveCard({...c, status, order}); }
+  document.addEventListener("pointerdown", e => { if(!menu.contains(e.target) && !e.target.closest(".more")) closeMenu(); });
+  window.addEventListener("scroll", closeMenu, true);
+
+  $("#board").addEventListener("click", e => {
+    if(justDragged){ justDragged=false; return; }
+    const addBtn = e.target.closest("[data-add]"); if(addBtn){ openEdit(null, addBtn.dataset.add); return; }
+    const card = e.target.closest(".card"); if(!card) return;
+    const c = cards.get(card.dataset.id); if(!c) return;
+    if(e.target.closest(".paid")){ if(canWrite) saveCard({...c, paid: c.paid==="paid"?"unpaid":"paid"}); return; }
+    if(e.target.closest(".more")){ menu.classList.contains("open") ? closeMenu() : openMenu(c, e.target.closest(".more")); return; }
+    openEdit(c);
+  });
+  $("#board").addEventListener("keydown", e => {
+    const card = e.target.closest && e.target.closest(".card");
+    if(card && e.target===card && (e.key==="Enter"||e.key===" ")){ e.preventDefault(); const c=cards.get(card.dataset.id); if(c) openEdit(c); }
+  });
+
+  // ---------- edit modal ----------
+  let editing = null, paidVal = "unpaid";
+  const editScrim = $("#editScrim");
+  function setPaid(v){ paidVal=v; document.querySelectorAll("#fPaid button").forEach(b=>b.classList.toggle("on", b.dataset.v===v)); }
+  document.querySelectorAll("#fPaid button").forEach(b=>b.addEventListener("click",()=>setPaid(b.dataset.v)));
+  function openEdit(c, status){
+    if(!canWrite) return;
+    editing = c ? c.id : null;
+    $("#editTitle").textContent = c ? "Edit commission" : "Create commission";
+    $("#editSave").textContent = c ? "Save" : "Create";
+    $("#fClient").value = c ? c.client : "";
+    $("#fDesc").value = c ? c.desc : "";
+    $("#fDeadline").value = c ? c.deadline : "";
+    $("#fPrice").value = c && c.price ? c.price : "";
+    $("#fCur").value = c ? c.currency : settings.defaultCurrency;
+    $("#fStatus").value = c ? c.status : (status || "commissioned");
+    setPaid(c ? c.paid : "unpaid");
+    $("#editDelete").style.visibility = c ? "visible" : "hidden";
+    $("#clientErr").style.display = "none";
+    editScrim.classList.add("open");
+    setTimeout(()=>$("#fClient").focus(), 30);
+  }
+  function closeEdit(){ editScrim.classList.remove("open"); editing=null; }
+  $("#addBtn").addEventListener("click", ()=>openEdit(null));
+  $("#editCancel").addEventListener("click", closeEdit);
+  editScrim.addEventListener("pointerdown", e => { if(e.target===editScrim) closeEdit(); });
+  $("#editForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const client = $("#fClient").value.trim();
+    if(!client){ $("#clientErr").style.display="block"; $("#fClient").focus(); return; }
+    const status = $("#fStatus").value;
+    const base = editing ? cards.get(editing) : null;
+    let order;
+    if(base && base.status===status) order = base.order;
+    else { const list = sorted(status); order = list.length ? list[list.length-1].order + 1000 : 1000; }
+    const c = { id: editing || newId(), client, desc: $("#fDesc").value.trim(), deadline: $("#fDeadline").value,
+      price: parseFloat($("#fPrice").value)||0, currency: validCur($("#fCur").value) || settings.defaultCurrency,
+      paid: paidVal, status, order, created: base ? base.created : Date.now() };
+    closeEdit(); saveCard(c);
+  });
+  $("#editDelete").addEventListener("click", () => {
+    const c = cards.get(editing); if(!c) return; closeEdit();
+    askDelete([c.id], "Delete this commission?", `“${c.client || "Untitled"}” will be removed from the board. This can’t be undone.`);
+  });
+
+  // ---------- confirm ----------
+  let pendingDelete = [];
+  const confirmScrim = $("#confirmScrim");
+  function askDelete(ids, title, text){
+    if(!canWrite) return;
+    pendingDelete = ids; $("#confirmTitle").textContent = title; $("#confirmText").textContent = text;
+    confirmScrim.classList.add("open"); setTimeout(()=>$("#confirmNo").focus(),30);
+  }
+  $("#confirmNo").addEventListener("click", ()=>confirmScrim.classList.remove("open"));
+  confirmScrim.addEventListener("pointerdown", e => { if(e.target===confirmScrim) confirmScrim.classList.remove("open"); });
+  $("#confirmYes").addEventListener("click", async () => {
+    confirmScrim.classList.remove("open");
+    const ids = pendingDelete; pendingDelete = [];
+    for(const id of ids) await removeCard(id);
+  });
+  $("#clearDone").addEventListener("click", () => {
+    const ids = sorted("done").filter(c=>c.paid==="paid").map(c=>c.id);
+    if(!ids.length){ note.textContent = "Nothing to clear: no paid cards in Done yet."; note.className="note"; setTimeout(setStatusNote, 3000); return; }
+    askDelete(ids, `Clear ${ids.length} paid card${ids.length===1?"":"s"}?`, "Every card in Done that’s marked Paid will be deleted. Unpaid ones stay. This can’t be undone.");
+  });
+  document.addEventListener("keydown", e => { if(e.key==="Escape"){ closeEdit(); closeMenu(); confirmScrim.classList.remove("open"); } });
+
+  // ---------- drag & drop (mouse: immediate; touch: long-press) ----------
+  let drag = null, justDragged = false, pressTimer = null;
+  $("#board").addEventListener("pointerdown", e => {
+    if(!canWrite || e.button !== 0) return;
+    const card = e.target.closest(".card"); if(!card) return;
+    if(e.target.closest(".paid, .more")) return;
+    drag = { id: card.dataset.id, el: card, startX: e.clientX, startY: e.clientY, active: false, pointerId: e.pointerId, touch: e.pointerType !== "mouse" };
+    if(drag.touch){
+      pressTimer = setTimeout(() => { if(drag && !drag.active){ startDrag(drag.startX, drag.startY); if(navigator.vibrate) try{navigator.vibrate(10)}catch(_){} } }, 350);
+    }
+  });
+  // stop the page scrolling once a touch drag has started
+  document.addEventListener("touchmove", e => { if(drag && drag.active) e.preventDefault(); }, {passive:false});
+  function startDrag(x, y){
+    const r = drag.el.getBoundingClientRect();
+    drag.offX = x - r.left; drag.offY = y - r.top;
+    const g = drag.el.cloneNode(true); g.classList.add("ghost-card"); g.style.width = r.width + "px";
+    g.style.left = r.left + "px"; g.style.top = r.top + "px"; document.body.appendChild(g); drag.ghost = g;
+    drag.slot = document.createElement("div"); drag.slot.className = "slot"; drag.slot.style.height = r.height + "px";
+    drag.el.classList.add("dragging"); drag.active = true; document.body.style.cursor = "grabbing"; closeMenu();
+  }
+  window.addEventListener("pointermove", e => {
+    if(!drag || e.pointerId !== drag.pointerId) return;
+    if(!drag.active){
+      const dist = Math.hypot(e.clientX-drag.startX, e.clientY-drag.startY);
+      if(drag.touch){ if(dist > 8){ clearTimeout(pressTimer); drag = null; } return; }
+      if(dist < 5) return; startDrag(e.clientX, e.clientY);
+    }
+    e.preventDefault();
+    drag.ghost.style.left = (e.clientX - drag.offX) + "px"; drag.ghost.style.top = (e.clientY - drag.offY) + "px";
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const colEl = under && under.closest(".col");
+    document.querySelectorAll(".col").forEach(c=>c.classList.toggle("over", c===colEl));
+    if(!colEl){ drag.slot.remove(); drag.target=null; return; }
+    const list = colEl.querySelector(".list");
+    const others = [...list.querySelectorAll(".card")].filter(c=>c!==drag.el);
+    let before = null;
+    for(const o of others){ const r=o.getBoundingClientRect(); if(e.clientY < r.top + r.height/2){ before=o; break; } }
+    const empty = list.querySelector(".empty"); if(empty) empty.style.display="none";
+    list.insertBefore(drag.slot, before);
+    drag.target = { status: colEl.dataset.status, beforeId: before ? before.dataset.id : null };
+    if(e.clientY < 70) window.scrollBy(0,-12); else if(e.clientY > innerHeight-60) window.scrollBy(0,12);
+  }, {passive:false});
+  function endDrag(commit){
+    clearTimeout(pressTimer);
+    if(!drag) return;
+    const d = drag; drag = null;
+    if(!d.active) return;
+    justDragged = true; setTimeout(()=>justDragged=false, 0);
+    d.ghost.remove(); d.slot.remove(); d.el.classList.remove("dragging"); document.body.style.cursor="";
+    document.querySelectorAll(".col").forEach(c=>c.classList.remove("over"));
+    if(!commit || !d.target){ render(); return; }
+    const c = cards.get(d.id); if(!c){ render(); return; }
+    // order relative to the full (unfiltered) column
+    const list = sorted(d.target.status).filter(x=>x.id!==c.id);
+    let idx = d.target.beforeId ? list.findIndex(x=>x.id===d.target.beforeId) : -1;
+    if(idx<0){ // dropped at the end of the visible list: place after the last visible card
+      const visible = list.filter(matches); const last = visible[visible.length-1];
+      idx = last ? list.indexOf(last)+1 : list.length;
+    }
+    const prev = list[idx-1], next = list[idx];
+    let order;
+    if(prev && next) order = (prev.order + next.order)/2;
+    else if(prev) order = prev.order + 1000;
+    else if(next) order = next.order - 1000;
+    else order = 1000;
+    if(c.status===d.target.status && c.order===order){ render(); return; }
+    saveCard({...c, status:d.target.status, order});
+  }
+  window.addEventListener("pointerup", e => { if(drag && e.pointerId===drag.pointerId) endDrag(true); });
+  window.addEventListener("pointercancel", e => { if(drag && e.pointerId===drag.pointerId) endDrag(false); });
+  window.addEventListener("contextmenu", e => { if(drag && drag.active) e.preventDefault(); });
+
+  // ---------- boot ----------
+  function setStatusNote(){
+    if(!canWrite){ note.textContent = "You can view this board but not change it."; note.className="note warn"; return; }
+    note.textContent = col ? "Changes save automatically and sync across your devices."
+                           : "Saved in this browser only. Open the board from claude.ai to sync across devices.";
+    note.className = col ? "note" : "note warn";
+  }
+  render();
+
+  (async () => {
+    const fallbackTimer = setTimeout(() => { if(!col){ lsLoad(); render(); setStatusNote(); } }, 10500);
+    try{ const cl = window.claude; db = cl && cl.use ? await cl.use("db") : null; }catch(e){ db = null; }
+    if(!db){ clearTimeout(fallbackTimer); lsLoad(); render(); setStatusNote(); return; }
+    try{
+      const user = await window.claude.use("user");
+      if(user && user.can){ const w = await user.can("data.write"); if(w === false) canWrite = false; }
+    }catch(e){}
+    col = db.collection("cards");
+    settingsRef = db.doc("settings/board");
+    clearTimeout(fallbackTimer);
+    let loaded = false;
+    const loadTimer = setTimeout(() => { if(!loaded){ note.textContent = "Can’t reach your saved board yet. It may be out of date."; note.className="note warn"; } }, 10000);
+    col.onSnapshot(snap => {
+      const next = new Map();
+      snap.docs.forEach(d => { const v = d.data(); if(v) next.set(d.id, {id:d.id, ...clean(v)}); });
+      cards = next;
+      if(!drag || !drag.active) render();
+      if(!snap.metadata.fromCache){ loaded = true; clearTimeout(loadTimer); setStatusNote(); }
+    }, err => {
+      clearTimeout(loadTimer);
+      if(err && err.code === "revoked") canWrite = false;
+      note.textContent = "Lost connection to your saved board. Reload the page to reconnect."; note.className="note warn";
+    });
+    settingsRef.onSnapshot(s => {
+      const v = s.exists ? s.data() : null;
+      if(v && validCur(v.defaultCurrency)){ settings.defaultCurrency = v.defaultCurrency; if(!drag || !drag.active) render(); }
+    }, () => {});
+  })();
+
+  setInterval(() => { if(!drag) render(); }, 60*60*1000);
+})();
+</script>
+</body>
+</html>
