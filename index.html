@@ -3,9 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Arieldzns Commission Board</title>
+<title>Commission Board · track your thumbnail commissions</title>
+<meta name="description" content="A free Jira-style board for designers to track commissions, deadlines and payments.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --bg:#ffffff; --surface:#f7f8f9; --col:#f1f2f4; --card:#ffffff;
@@ -18,17 +20,36 @@
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--text);font:400 14px/20px Inter,-apple-system,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   button,input,select,textarea{font:inherit;color:inherit}
+  [hidden]{display:none !important}
+  a{color:var(--blue)}
 
-  /* top bar */
+  /* ---------- auth ---------- */
+  .auth{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--surface);padding:24px}
+  .auth-box{width:100%;max-width:400px;background:#fff;border-radius:3px;box-shadow:0 0 10px rgba(9,30,66,.1);padding:32px 40px}
+  .brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px}
+  .logo{width:28px;height:28px;border-radius:6px;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+  .brand span{font-weight:700;font-size:18px}
+  .auth h2{text-align:center;font-size:16px;font-weight:600;margin:0 0 20px;color:var(--sub)}
+  .auth .btn.primary{width:100%;height:40px;justify-content:center;margin-top:4px}
+  .auth-links{text-align:center;margin-top:18px;font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:8px}
+  .linkbtn{background:none;border:none;color:var(--blue);cursor:pointer;padding:0;font-size:13px}
+  .linkbtn:hover{text-decoration:underline}
+  .msg{border-radius:3px;padding:10px 12px;font-size:13px;margin-bottom:16px;display:none}
+  .msg.show{display:block}
+  .msg.error{background:var(--red-bg);color:var(--red)}
+  .msg.ok{background:var(--green-bg);color:var(--green)}
+  .auth-foot{text-align:center;font-size:12px;color:var(--muted);margin-top:16px}
+
+  /* ---------- top bar ---------- */
   .topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 20px;background:#fff;position:sticky;top:0;z-index:20}
-  .logo{width:28px;height:28px;border-radius:6px;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
-  .crumb{color:var(--muted);font-size:14px}
+  .crumb{color:var(--muted);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .crumb b{color:var(--text);font-weight:600}
   .spacer{flex:1}
+  .me{width:32px;height:32px;border-radius:50%;border:none;color:#fff;font-weight:700;font-size:12px;cursor:pointer;flex:none}
+  .me:hover{box-shadow:0 0 0 3px var(--blue-bg)}
 
   .page{padding:20px 24px 40px;max-width:1440px;margin:0 auto}
-  .title-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
-  h1{font-size:24px;line-height:28px;font-weight:600;margin:0;letter-spacing:-.01em}
+  h1{font-size:24px;line-height:28px;font-weight:600;margin:0 0 16px;letter-spacing:-.01em;word-break:break-word}
   .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}
   .search{position:relative}
   .search input{width:220px;height:32px;border:1px solid var(--border-strong);border-radius:3px;padding:0 10px 0 32px;background:#fff}
@@ -37,26 +58,28 @@
   .chip-select{height:32px;border:1px solid var(--border);border-radius:3px;background:#fff;padding:0 28px 0 10px;font-weight:500;color:var(--sub);appearance:none;-webkit-appearance:none;cursor:pointer;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2344546f' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
   .chip-select:hover{background-color:var(--gray-bg)}
-  .tb-label{color:var(--muted);font-size:12px;font-weight:600;margin-left:4px}
 
   .btn{height:32px;padding:0 12px;border-radius:3px;border:none;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .btn:disabled{opacity:.6;cursor:default}
   .btn.primary{background:var(--blue);color:#fff}
-  .btn.primary:hover{background:var(--blue-hover)}
+  .btn.primary:hover:not(:disabled){background:var(--blue-hover)}
   .btn.subtle{background:transparent;color:var(--sub)}
   .btn.subtle:hover{background:var(--gray-bg)}
   .btn.default{background:var(--gray-bg);color:var(--sub)}
   .btn.default:hover{background:#dcdfe4}
   .btn.danger{background:#c9372c;color:#fff}
-  .btn.danger:hover{background:#ae2e24}
+  .btn.danger:hover:not(:disabled){background:#ae2e24}
 
-  /* summary */
+  .banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--blue-bg);border-radius:3px;padding:10px 14px;margin-bottom:16px;color:var(--text)}
+  .banner .spacer{min-width:8px}
+
   .summary{display:flex;gap:28px;flex-wrap:wrap;padding:12px 16px;border:1px solid var(--border);border-radius:3px;margin-bottom:16px;background:#fff}
   .sum .k{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
   .sum .v{font-size:18px;font-weight:600;margin-top:2px;line-height:24px}
   .sum .v.red{color:var(--red)}
   .sum .v.small{font-size:15px}
 
-  /* board */
+  /* ---------- board ---------- */
   .board{display:grid;grid-template-columns:repeat(3,minmax(260px,1fr));gap:8px;align-items:start}
   .col{background:var(--col);border-radius:6px;padding:4px 4px 8px;min-height:65vh;display:flex;flex-direction:column;transition:background .12s}
   .col.over{background:#e9f2ff}
@@ -67,57 +90,59 @@
   .col-tool:hover{background:#dcdfe4}
   .list{display:flex;flex-direction:column;gap:4px;flex:1;padding:0 2px}
   .empty{color:var(--muted);text-align:center;padding:20px 8px;font-size:13px}
-  .add-inline{margin:4px 2px 0;text-align:left;justify-content:flex-start;color:var(--sub)}
+  .add-inline{margin:4px 2px 0;justify-content:flex-start;color:var(--sub)}
 
   .card{position:relative;background:var(--card);border-radius:3px;box-shadow:var(--shadow);padding:10px 12px 8px;cursor:pointer;user-select:none;transition:background .1s}
   .card:hover{background:#f7f8f9}
   .card:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
   .card.dragging{opacity:.3}
-  .summary-text{font-size:14px;line-height:20px;color:var(--text);word-break:break-word;margin-right:22px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .card.saving{opacity:.7}
+  .summary-text{font-size:14px;line-height:20px;word-break:break-word;margin-right:22px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
   .summary-text.placeholder{color:var(--muted);font-style:italic}
   .meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px}
-  .lozenge{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border-radius:3px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;border:none}
-  .lz-gray{background:var(--gray-bg);color:var(--sub)}
+  .lozenge{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:3px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;border:none}
   .lz-red{background:var(--red-bg);color:var(--red)}
-  .lz-amber{background:var(--amber-bg);color:var(--amber)}
   .lz-green{background:var(--green-bg);color:var(--green)}
   button.lozenge{cursor:pointer}
   button.lozenge:hover{filter:brightness(.95)}
-  .date{font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border-radius:3px;color:var(--sub);background:transparent}
+  .date{font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border-radius:3px;color:var(--sub)}
   .date.late{background:var(--red-bg);color:var(--red)}
   .date.soon{background:var(--amber-bg);color:var(--amber)}
   .footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:8px}
   .client{display:flex;align-items:center;gap:6px;min-width:0}
   .avatar{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:10px;font-weight:700;flex:none}
   .client-name{font-size:12px;font-weight:500;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .price{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap}
+  .price{font-size:13px;font-weight:600;white-space:nowrap}
   .more{position:absolute;top:6px;right:6px;width:24px;height:24px;border:none;border-radius:3px;background:transparent;color:var(--sub);display:grid;place-items:center;cursor:pointer;opacity:0}
   .card:hover .more,.card:focus-within .more{opacity:1}
   .more:hover{background:#dcdfe4}
   .ghost-card{position:fixed;pointer-events:none;z-index:50;transform:rotate(2deg);box-shadow:var(--shadow-raised)}
   .slot{border-radius:3px;background:#dcdfe4;opacity:.7}
 
-  /* menu */
-  .menu{position:fixed;z-index:60;background:#fff;border-radius:3px;box-shadow:var(--shadow-raised);padding:4px 0;min-width:180px;display:none}
+  .menu{position:fixed;z-index:60;background:#fff;border-radius:3px;box-shadow:var(--shadow-raised);padding:4px 0;min-width:190px;display:none}
   .menu.open{display:block}
-  .menu button{display:flex;width:100%;text-align:left;padding:7px 14px;background:none;border:none;cursor:pointer;color:var(--text);gap:8px;align-items:center}
+  .menu .head{padding:8px 14px 6px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border);margin-bottom:4px;word-break:break-all}
+  .menu button{display:flex;width:100%;text-align:left;padding:7px 14px;background:none;border:none;cursor:pointer;color:var(--text)}
   .menu button:hover{background:var(--gray-bg)}
   .menu .sep{height:1px;background:var(--border);margin:4px 0}
   .menu .dangerous{color:var(--red)}
-  .menu .cur{color:var(--blue);font-weight:600}
 
   .note{color:var(--muted);font-size:12px;margin-top:14px}
   .note.warn{color:var(--amber)}
+  .page-foot{margin-top:20px;font-size:12px;color:var(--muted)}
 
-  /* modal */
+  .loading{min-height:100vh;display:grid;place-items:center;color:var(--muted)}
+
+  /* ---------- modals ---------- */
   .scrim{position:fixed;inset:0;background:rgba(9,30,66,.54);display:none;align-items:flex-start;justify-content:center;padding:60px 16px;z-index:100;overflow:auto}
   .scrim.open{display:flex}
   .modal{background:#fff;border-radius:3px;box-shadow:var(--shadow-raised);width:100%;max-width:560px;padding:24px}
-  .modal.small{max-width:400px}
+  .modal.small{max-width:420px}
   .modal h3{font-size:20px;font-weight:600;margin:0 0 20px;line-height:24px}
   .field{margin-bottom:16px}
   .field label{display:block;font-size:12px;font-weight:600;color:var(--sub);margin-bottom:4px}
-  .field label .req{color:var(--red)}
+  .field .hint{font-size:12px;color:var(--muted);margin-top:4px}
+  .req{color:var(--red)}
   .input{width:100%;height:36px;border:1px solid var(--border-strong);border-radius:3px;padding:0 8px;background:#fff}
   textarea.input{height:auto;min-height:88px;padding:8px;resize:vertical;line-height:20px}
   .input:hover{background:var(--surface)}
@@ -137,69 +162,133 @@
   .modal-actions{display:flex;justify-content:space-between;gap:8px;margin-top:24px}
   .modal-actions .right{display:flex;gap:8px;margin-left:auto}
 
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#172b4d;color:#fff;padding:10px 16px;border-radius:3px;font-size:13px;box-shadow:var(--shadow-raised);z-index:200;display:none;max-width:90vw}
+  .toast.show{display:block}
+
   @media (max-width:860px){
     .board{grid-template-columns:1fr}
     .col{min-height:auto}
     .search input{width:160px}
     .grid2{grid-template-columns:1fr}
+    .auth-box{padding:28px 22px}
   }
   @media (hover:none){ .more{opacity:1} }
 </style>
 </head>
 <body>
-<div class="topbar">
-  <div class="logo">A</div>
-  <div class="crumb">Arieldzns / <b>Commissions</b></div>
-  <div class="spacer"></div>
-  <button class="btn primary" id="addBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Create</button>
+
+<div class="loading" id="loadingView">Loading…</div>
+
+<!-- ================= AUTH ================= -->
+<div class="auth" id="authView" hidden>
+  <div class="auth-box">
+    <div class="brand"><div class="logo">C</div><span>Commission Board</span></div>
+
+    <!-- sign in -->
+    <form id="signInForm" autocomplete="on">
+      <h2>Log in to your board</h2>
+      <div class="msg" data-msg></div>
+      <div class="field"><label for="siEmail">Email</label><input class="input" id="siEmail" type="email" autocomplete="email" required></div>
+      <div class="field"><label for="siPass">Password</label><input class="input" id="siPass" type="password" autocomplete="current-password" required></div>
+      <button class="btn primary" type="submit">Log in</button>
+      <div class="auth-links">
+        <button type="button" class="linkbtn" data-goto="forgotForm">Forgot your password?</button>
+        <span>New here? <button type="button" class="linkbtn" data-goto="signUpForm">Create an account</button></span>
+      </div>
+    </form>
+
+    <!-- sign up -->
+    <form id="signUpForm" autocomplete="on" hidden>
+      <h2>Create your free board</h2>
+      <div class="msg" data-msg></div>
+      <div class="field"><label for="suName">Your name or studio name</label><input class="input" id="suName" maxlength="60" autocomplete="nickname" required placeholder="e.g. Arieldzns"></div>
+      <div class="field"><label for="suEmail">Email</label><input class="input" id="suEmail" type="email" autocomplete="email" required></div>
+      <div class="field"><label for="suPass">Password</label><input class="input" id="suPass" type="password" autocomplete="new-password" minlength="8" required>
+        <div class="hint">At least 8 characters.</div></div>
+      <button class="btn primary" type="submit">Create account</button>
+      <div class="auth-links"><span>Already have an account? <button type="button" class="linkbtn" data-goto="signInForm">Log in</button></span></div>
+    </form>
+
+    <!-- forgot -->
+    <form id="forgotForm" hidden>
+      <h2>Reset your password</h2>
+      <div class="msg" data-msg></div>
+      <div class="field"><label for="fgEmail">Email</label><input class="input" id="fgEmail" type="email" autocomplete="email" required></div>
+      <button class="btn primary" type="submit">Send reset link</button>
+      <div class="auth-links"><button type="button" class="linkbtn" data-goto="signInForm">Back to log in</button></div>
+    </form>
+
+    <!-- new password (after clicking the reset email) -->
+    <form id="newPassForm" hidden>
+      <h2>Choose a new password</h2>
+      <div class="msg" data-msg></div>
+      <div class="field"><label for="npPass">New password</label><input class="input" id="npPass" type="password" autocomplete="new-password" minlength="8" required></div>
+      <button class="btn primary" type="submit">Save password</button>
+    </form>
+
+    <div class="auth-foot">Your commissions are private to your account. <a href="privacy.html">Privacy</a></div>
+  </div>
 </div>
 
-<main class="page">
-  <div class="title-row"><h1>Commission board</h1></div>
+<!-- ================= BOARD ================= -->
+<div id="appView" hidden>
+  <div class="topbar">
+    <div class="logo">C</div>
+    <div class="crumb">Commission Board / <b id="crumbName">My board</b></div>
+    <div class="spacer"></div>
+    <button class="btn primary" id="addBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Create</button>
+    <button class="me" id="meBtn" title="Account" aria-label="Account menu"></button>
+  </div>
 
-  <div class="toolbar">
-    <div class="search">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="search" type="search" placeholder="Search board" aria-label="Search board">
+  <main class="page">
+    <h1 id="boardTitle">Commissions</h1>
+
+    <div class="banner" id="importBanner" hidden>
+      <span id="importText"></span><span class="spacer"></span>
+      <button class="btn subtle" id="importDismiss">Not now</button>
+      <button class="btn primary" id="importBtn">Import</button>
     </div>
-    <select class="chip-select" id="paidFilter" aria-label="Payment filter">
-      <option value="all">All payments</option><option value="unpaid">Not paid</option><option value="paid">Paid</option>
-    </select>
-    <span class="tb-label">Default currency</span>
-    <select class="chip-select" id="defaultCur" aria-label="Default currency">
-      <option value="USD">USD $</option><option value="EUR">EUR €</option><option value="GBP">GBP £</option>
-    </select>
-  </div>
 
-  <div class="summary">
-    <div class="sum"><div class="k">Still owed</div><div class="v red" id="sOwed">—</div></div>
-    <div class="sum"><div class="k">Paid</div><div class="v" id="sPaid">—</div></div>
-    <div class="sum"><div class="k">Active</div><div class="v" id="sActive">0</div></div>
-    <div class="sum"><div class="k">Overdue</div><div class="v" id="sOver">0</div></div>
-  </div>
+    <div class="toolbar">
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="search" type="search" placeholder="Search board" aria-label="Search board">
+      </div>
+      <select class="chip-select" id="paidFilter" aria-label="Payment filter">
+        <option value="all">All payments</option><option value="unpaid">Not paid</option><option value="paid">Paid</option>
+      </select>
+    </div>
 
-  <div class="board" id="board">
-    <section class="col" data-status="commissioned">
-      <div class="col-head"><h2>Commissioned</h2><span class="count" data-count="commissioned">0</span></div>
-      <div class="list" data-list="commissioned"></div>
-      <button class="btn subtle add-inline" data-add="commissioned">+ Create</button>
-    </section>
-    <section class="col" data-status="progress">
-      <div class="col-head"><h2>In progress</h2><span class="count" data-count="progress">0</span></div>
-      <div class="list" data-list="progress"></div>
-      <button class="btn subtle add-inline" data-add="progress">+ Create</button>
-    </section>
-    <section class="col" data-status="done">
-      <div class="col-head"><h2>Done</h2><span class="count" data-count="done">0</span>
-        <button class="col-tool" id="clearDone" title="Delete every paid card in Done">Clear paid</button></div>
-      <div class="list" data-list="done"></div>
-    </section>
-  </div>
-  <div class="note" id="note">Loading your board…</div>
-</main>
+    <div class="summary">
+      <div class="sum"><div class="k">Still owed</div><div class="v red" id="sOwed">—</div></div>
+      <div class="sum"><div class="k">Paid</div><div class="v" id="sPaid">—</div></div>
+      <div class="sum"><div class="k">Active</div><div class="v" id="sActive">0</div></div>
+      <div class="sum"><div class="k">Overdue</div><div class="v" id="sOver">0</div></div>
+    </div>
 
-<!-- card menu -->
+    <div class="board" id="board">
+      <section class="col" data-status="commissioned">
+        <div class="col-head"><h2>Commissioned</h2><span class="count" data-count="commissioned">0</span></div>
+        <div class="list" data-list="commissioned"></div>
+        <button class="btn subtle add-inline" data-add="commissioned">+ Create</button>
+      </section>
+      <section class="col" data-status="progress">
+        <div class="col-head"><h2>In progress</h2><span class="count" data-count="progress">0</span></div>
+        <div class="list" data-list="progress"></div>
+        <button class="btn subtle add-inline" data-add="progress">+ Create</button>
+      </section>
+      <section class="col" data-status="done">
+        <div class="col-head"><h2>Done</h2><span class="count" data-count="done">0</span>
+          <button class="col-tool" id="clearDone" title="Delete every paid card in Done">Clear paid</button></div>
+        <div class="list" data-list="done"></div>
+      </section>
+    </div>
+    <div class="page-foot">Only you can see this board. <a href="privacy.html">Privacy</a></div>
+  </main>
+</div>
+
 <div class="menu" id="menu"></div>
+<div class="toast" id="toast"></div>
 
 <!-- edit modal -->
 <div class="scrim" id="editScrim">
@@ -219,7 +308,7 @@
       <div class="field"><label for="fPrice">Price</label>
         <div class="price-group">
           <select class="input" id="fCur" aria-label="Currency"><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option></select>
-          <input class="input" id="fPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0">
+          <input class="input" id="fPrice" type="number" min="0" max="99999999" step="0.01" inputmode="decimal" placeholder="0">
         </div>
       </div>
     </div>
@@ -241,11 +330,30 @@
   </form>
 </div>
 
+<!-- settings modal -->
+<div class="scrim" id="settingsScrim">
+  <form class="modal small" id="settingsForm">
+    <h3>Settings</h3>
+    <div class="field"><label for="stName">Display name</label><input class="input" id="stName" maxlength="60" required></div>
+    <div class="field"><label for="stCur">Default currency for new cards</label>
+      <select class="input" id="stCur"><option value="USD">USD $</option><option value="EUR">EUR €</option><option value="GBP">GBP £</option></select></div>
+    <div class="modal-actions">
+      <div class="right">
+        <button type="button" class="btn subtle" id="settingsCancel">Cancel</button>
+        <button type="submit" class="btn primary">Save</button>
+      </div>
+    </div>
+  </form>
+</div>
+
 <!-- confirm modal -->
 <div class="scrim" id="confirmScrim">
   <div class="modal small">
     <h3 id="confirmTitle">Delete this commission?</h3>
     <p id="confirmText" style="margin:0;color:var(--sub)">This can’t be undone.</p>
+    <div class="field" id="confirmTypeWrap" hidden style="margin-top:16px">
+      <label for="confirmType">Type DELETE to confirm</label><input class="input" id="confirmType" autocomplete="off">
+    </div>
     <div class="modal-actions"><div class="right">
       <button type="button" class="btn subtle" id="confirmNo">Cancel</button>
       <button type="button" class="btn danger" id="confirmYes">Delete</button>
@@ -255,44 +363,163 @@
 
 <script>
 (() => {
+  // ---------- config (the publishable key is meant to be public; privacy is enforced by database rules) ----------
+  const SUPABASE_URL = "https://lvgrutffdeyplfqmbvwr.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_VLBIQLfc0CnzczqBPLkanA_X1c-YrKg";
+
   const STATUSES = ["commissioned","progress","done"];
   const STATUS_LABEL = {commissioned:"Commissioned", progress:"In progress", done:"Done"};
   const CURRENCIES = {USD:"$", EUR:"€", GBP:"£"};
-  const LS_KEY = "arieldzns-board-v1", LS_SET = "arieldzns-board-settings";
-  let cards = new Map();
-  let settings = { defaultCurrency: "USD" };
-  let db = null, col = null, settingsRef = null;
-  let canWrite = true;
-  let filterText = "", filterPaid = "all";
+  const OLD_LS_KEY = "arieldzns-board-v1";
   const $ = s => document.querySelector(s);
-  const note = $("#note");
 
-  // ---------- storage ----------
-  function lsLoad(){ try{ const raw = localStorage.getItem(LS_KEY); if(raw) JSON.parse(raw).forEach(c=>cards.set(c.id,{...clean(c), id:c.id})); const s=localStorage.getItem(LS_SET); if(s) settings={...settings,...JSON.parse(s)}; }catch(e){} }
-  function lsSave(){ try{ localStorage.setItem(LS_KEY, JSON.stringify([...cards.values()])); localStorage.setItem(LS_SET, JSON.stringify(settings)); }catch(e){} }
-  function newId(){ return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
-  function validCur(c){ return CURRENCIES[c] ? c : null; }
+  if(!window.supabase || !window.supabase.createClient){
+    $("#loadingView").textContent = "Couldn’t load the board. Check your connection and reload.";
+    return;
+  }
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  async function saveCard(c){
+  let user = null, profile = { display_name:"", default_currency:"USD" };
+  let cards = new Map();
+  let filterText = "", filterPaid = "all";
+  let recovering = false;
+
+  // ---------- small UI helpers ----------
+  let toastTimer;
+  function toast(text){ const t=$("#toast"); t.textContent=text; t.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"), 3500); }
+  function showView(id){ ["loadingView","authView","appView"].forEach(v => $("#"+v).hidden = v!==id); }
+  function showAuthForm(id){ ["signInForm","signUpForm","forgotForm","newPassForm"].forEach(f => $("#"+f).hidden = f!==id); clearMsgs(); const first=$("#"+id+" input"); if(first) setTimeout(()=>first.focus(),30); }
+  function setMsg(form, text, kind){ const m=form.querySelector("[data-msg]"); m.textContent=text; m.className="msg show "+kind; }
+  function clearMsgs(){ document.querySelectorAll("[data-msg]").forEach(m=>{m.className="msg"; m.textContent="";}); }
+  function busy(form, on){ const b=form.querySelector("button[type=submit]"); if(b) b.disabled=on; }
+  function friendly(err){
+    const m = (err && (err.message||err.error_description)) || "Something went wrong.";
+    if(/invalid login credentials/i.test(m)) return "Wrong email or password.";
+    if(/email not confirmed/i.test(m)) return "Confirm your email first: check your inbox for the link we sent.";
+    if(/already registered|already exists/i.test(m)) return "There’s already an account with that email. Try logging in.";
+    if(/rate limit|too many/i.test(m)) return "Too many attempts. Wait a few minutes and try again.";
+    if(/failed to fetch|network/i.test(m)) return "Couldn’t reach the server. Check your connection.";
+    return m;
+  }
+  const redirectUrl = location.origin + location.pathname;
+
+  // ---------- auth ----------
+  document.querySelectorAll("[data-goto]").forEach(b => b.addEventListener("click", () => showAuthForm(b.dataset.goto)));
+
+  $("#signInForm").addEventListener("submit", async e => {
+    e.preventDefault(); const f=e.target; busy(f,true); clearMsgs();
+    const { error } = await sb.auth.signInWithPassword({ email: $("#siEmail").value.trim(), password: $("#siPass").value });
+    busy(f,false);
+    if(error) setMsg(f, friendly(error), "error");
+  });
+
+  $("#signUpForm").addEventListener("submit", async e => {
+    e.preventDefault(); const f=e.target; clearMsgs();
+    const name = $("#suName").value.trim();
+    if(!name){ setMsg(f,"Add your name or studio name.","error"); return; }
+    busy(f,true);
+    const { data, error } = await sb.auth.signUp({ email: $("#suEmail").value.trim(), password: $("#suPass").value,
+      options: { data: { display_name: name }, emailRedirectTo: redirectUrl } });
+    busy(f,false);
+    if(error){ setMsg(f, friendly(error), "error"); return; }
+    if(!data.session){
+      setMsg(f, "Almost done! We sent a confirmation link to " + $("#suEmail").value.trim() + ". Click it, then come back and log in.", "ok");
+      f.reset();
+    }
+  });
+
+  $("#forgotForm").addEventListener("submit", async e => {
+    e.preventDefault(); const f=e.target; busy(f,true); clearMsgs();
+    const { error } = await sb.auth.resetPasswordForEmail($("#fgEmail").value.trim(), { redirectTo: redirectUrl });
+    busy(f,false);
+    if(error) setMsg(f, friendly(error), "error");
+    else setMsg(f, "If that email has an account, a reset link is on its way.", "ok");
+  });
+
+  $("#newPassForm").addEventListener("submit", async e => {
+    e.preventDefault(); const f=e.target; busy(f,true); clearMsgs();
+    const { error } = await sb.auth.updateUser({ password: $("#npPass").value });
+    busy(f,false);
+    if(error){ setMsg(f, friendly(error), "error"); return; }
+    recovering = false; toast("Password updated.");
+    const { data } = await sb.auth.getSession();
+    if(data.session) enterApp(data.session.user); else { showView("authView"); showAuthForm("signInForm"); }
+  });
+
+  sb.auth.onAuthStateChange((event, session) => {
+    // never await Supabase calls directly inside this callback
+    setTimeout(() => {
+      if(event === "PASSWORD_RECOVERY"){ recovering = true; showView("authView"); showAuthForm("newPassForm"); return; }
+      if(recovering) return;
+      if(session && session.user){ if(!user || user.id !== session.user.id) enterApp(session.user); }
+      else if(event === "SIGNED_OUT" || event === "INITIAL_SESSION"){ leaveApp(); }
+    }, 0);
+  });
+
+  function leaveApp(){
+    user = null; cards = new Map();
+    showView("authView"); showAuthForm("signInForm");
+  }
+
+  async function enterApp(u){
+    user = u;
+    showView("loadingView"); $("#loadingView").textContent = "Loading your board…";
+    // load profile (create it if the signup trigger hasn't)
+    let { data: p, error: pe } = await sb.from("profiles").select("display_name, default_currency").eq("id", u.id).maybeSingle();
+    if(!pe && !p){
+      const name = (u.user_metadata && u.user_metadata.display_name) || (u.email||"").split("@")[0];
+      const ins = await sb.from("profiles").insert({ id:u.id, display_name: name.slice(0,60) }).select("display_name, default_currency").single();
+      p = ins.data;
+    }
+    if(p) profile = { display_name: p.display_name || (u.email||"").split("@")[0], default_currency: CURRENCIES[p.default_currency] ? p.default_currency : "USD" };
+    const ok = await loadCards();
+    if(!ok){ $("#loadingView").textContent = "Couldn’t load your board. Check your connection and reload."; return; }
+    applyProfile(); showView("appView"); render(); checkImport();
+  }
+
+  async function loadCards(){
+    const { data, error } = await sb.from("commissions").select("*").order("sort_order", { ascending: true });
+    if(error){ console.error(error); return false; }
+    cards = new Map(data.map(r => [r.id, fromRow(r)]));
+    return true;
+  }
+  function fromRow(r){
+    return { id:r.id, client:r.client||"", desc:r.description||"", deadline:r.deadline||"", price:Number(r.price)||0,
+      currency: CURRENCIES[r.currency] ? r.currency : "USD", paid: r.paid ? "paid" : "unpaid",
+      status: STATUSES.includes(r.status) ? r.status : "commissioned", order: Number(r.sort_order)||0, created: Date.parse(r.created_at)||0 };
+  }
+  function toRow(c){
+    return { client:c.client.slice(0,80), description:(c.desc||"").slice(0,1000), deadline:c.deadline||null,
+      price: Math.max(0, Math.round((Number(c.price)||0)*100)/100), currency:c.currency, paid:c.paid==="paid",
+      status:c.status, sort_order:c.order };
+  }
+
+  // refresh when coming back to the tab (keeps phone + computer in step)
+  document.addEventListener("visibilitychange", async () => {
+    if(document.visibilityState === "visible" && user && !drag && !anyModalOpen()){ if(await loadCards()) render(); }
+  });
+  function anyModalOpen(){ return !!document.querySelector(".scrim.open"); }
+
+  // ---------- writes ----------
+  async function createCard(c){
+    const tempId = "tmp-" + Math.random().toString(36).slice(2);
+    cards.set(tempId, {...c, id:tempId, created:Date.now()}); render();
+    const { data, error } = await sb.from("commissions").insert(toRow(c)).select("*").single();
+    cards.delete(tempId);
+    if(error){ render(); toast("Couldn’t save: " + friendly(error)); return; }
+    cards.set(data.id, fromRow(data)); render();
+  }
+  async function updateCard(c){
+    const prev = cards.get(c.id);
     cards.set(c.id, c); render();
-    if(col){ try{ await col.doc(c.id).set(clean(c)); }catch(e){ handleWriteError(e); } } else lsSave();
+    const { error } = await sb.from("commissions").update(toRow(c)).eq("id", c.id);
+    if(error){ if(prev) cards.set(c.id, prev); render(); toast("Couldn’t save: " + friendly(error)); }
   }
-  async function removeCard(id){
-    cards.delete(id); render();
-    if(col){ try{ await col.doc(id).delete(); }catch(e){ handleWriteError(e); } } else lsSave();
-  }
-  async function saveSettings(){
-    if(settingsRef){ try{ await settingsRef.set({defaultCurrency: settings.defaultCurrency}); }catch(e){ handleWriteError(e); } } else lsSave();
-  }
-  function clean(c){
-    return { client:String(c.client||""), desc:String(c.desc||""), deadline:String(c.deadline||""),
-      price:Number(c.price)||0, currency: validCur(c.currency) || "EUR", paid:c.paid==="paid"?"paid":"unpaid",
-      status:STATUSES.includes(c.status)?c.status:"commissioned", order:Number(c.order)||0, created:Number(c.created)||Date.now() };
-  }
-  function handleWriteError(e){
-    if(e && e.code === "invalid_argument"){ canWrite = false; note.textContent = "You can view this board but not change it."; note.className="note warn"; }
-    else if(e && e.code === "quota_exceeded"){ note.textContent = "The board is full. Delete some old cards to add more."; note.className="note warn"; }
-    else { note.textContent = "Couldn’t save that change. Check your connection and try again."; note.className="note warn"; }
+  async function deleteCards(ids){
+    const removed = ids.map(id => cards.get(id)).filter(Boolean);
+    ids.forEach(id => cards.delete(id)); render();
+    const { error } = await sb.from("commissions").delete().in("id", ids);
+    if(error){ removed.forEach(c => cards.set(c.id, c)); render(); toast("Couldn’t delete: " + friendly(error)); }
   }
 
   // ---------- helpers ----------
@@ -301,18 +528,26 @@
   function daysUntil(ds){ if(!ds) return null; const [y,m,d]=ds.split("-").map(Number); if(!y) return null;
     const t=new Date(); return Math.round((Date.UTC(y,m-1,d)-Date.UTC(t.getFullYear(),t.getMonth(),t.getDate()))/86400000); }
   function fmtDate(ds){ const [y,m,d]=ds.split("-").map(Number); if(!y) return "";
-    const dt=new Date(y,m-1,d); const opts={day:"numeric",month:"short"}; if(y!==new Date().getFullYear()) opts.year="numeric";
-    return dt.toLocaleDateString("en-GB",opts); }
+    const opts={day:"numeric",month:"short"}; if(y!==new Date().getFullYear()) opts.year="numeric";
+    return new Date(y,m-1,d).toLocaleDateString("en-GB",opts); }
   function sorted(status){ return [...cards.values()].filter(c=>c.status===status).sort((a,b)=>(a.order-b.order)||(a.created-b.created)); }
   function matches(c){
     if(filterPaid!=="all" && c.paid!==filterPaid) return false;
-    if(!filterText) return true;
-    return (c.client+" "+c.desc).toLowerCase().includes(filterText);
+    return !filterText || (c.client+" "+c.desc).toLowerCase().includes(filterText);
   }
   const AV_COLORS = ["#0c66e4","#6e5dc6","#1f845a","#c9372c","#a54800","#227d9b","#943d73","#5b7f24"];
   function initials(name){ const p=name.trim().split(/\s+/).filter(Boolean); if(!p.length) return "?"; return (p[0][0]+(p[1]?p[1][0]:(p[0][1]||""))).toUpperCase(); }
   function avColor(name){ let h=0; for(const ch of name) h=(h*31+ch.charCodeAt(0))>>>0; return AV_COLORS[h%AV_COLORS.length]; }
-  function totalsText(obj){ const parts = Object.keys(CURRENCIES).filter(k=>obj[k]).map(k=>fmtMoney(obj[k],k)); return parts.length ? parts.join(" · ") : fmtMoney(0, settings.defaultCurrency); }
+  function totalsText(obj){ const parts = Object.keys(CURRENCIES).filter(k=>obj[k]).map(k=>fmtMoney(obj[k],k)); return parts.length ? parts.join(" · ") : fmtMoney(0, profile.default_currency); }
+  function nextOrder(status){ const l = sorted(status); return l.length ? l[l.length-1].order + 1000 : 1000; }
+
+  function applyProfile(){
+    const name = profile.display_name || "My";
+    $("#crumbName").textContent = profile.display_name || "My board";
+    $("#boardTitle").textContent = profile.display_name ? profile.display_name + " · Commissions" : "My commissions";
+    const me = $("#meBtn"); me.textContent = initials(name); me.style.background = avColor(name);
+    document.title = (profile.display_name ? profile.display_name + " · " : "") + "Commission Board";
+  }
 
   // ---------- render ----------
   const ICON_CAL = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
@@ -320,14 +555,12 @@
 
   function cardEl(c){
     const el = document.createElement("article");
-    el.className = "card"; el.dataset.id = c.id; el.tabIndex = 0;
+    el.className = "card" + (c.id.startsWith("tmp-") ? " saving" : ""); el.dataset.id = c.id; el.tabIndex = 0;
     el.innerHTML = `<button class="more" title="More actions" aria-label="More actions">${ICON_MORE}</button>
-      <div class="summary-text"></div>
-      <div class="meta"></div>
+      <div class="summary-text"></div><div class="meta"></div>
       <div class="footer"><div class="client"><div class="avatar"></div><span class="client-name"></span></div><span class="price"></span></div>`;
     const st = el.querySelector(".summary-text");
     if(c.desc) st.textContent = c.desc; else { st.textContent = "No description"; st.classList.add("placeholder"); }
-
     const meta = el.querySelector(".meta");
     const paid = document.createElement("button");
     paid.className = "lozenge paid " + (c.paid==="paid" ? "lz-green" : "lz-red");
@@ -335,8 +568,7 @@
     paid.title = c.paid==="paid" ? "Mark as not paid" : "Mark as paid";
     meta.appendChild(paid);
     if(c.deadline){
-      const d = document.createElement("span"); d.className="date";
-      const n = daysUntil(c.deadline);
+      const d = document.createElement("span"); d.className="date"; const n = daysUntil(c.deadline);
       d.innerHTML = ICON_CAL; d.append(" " + fmtDate(c.deadline));
       if(c.status!=="done" && n!==null){
         if(n<0){ d.classList.add("late"); d.title="Overdue by "+(-n)+" day"+(n===-1?"":"s"); }
@@ -355,69 +587,72 @@
   function render(){
     const owed={}, paid={}; let active=0, over=0;
     for(const c of cards.values()){
-      const bucket = c.paid==="paid" ? paid : owed;
-      bucket[c.currency] = (bucket[c.currency]||0) + (Number(c.price)||0);
+      const b = c.paid==="paid" ? paid : owed; b[c.currency] = (b[c.currency]||0) + (Number(c.price)||0);
       if(c.status!=="done"){ active++; const n=daysUntil(c.deadline); if(n!==null && n<0) over++; }
     }
     const ot = totalsText(owed), pt = totalsText(paid);
     $("#sOwed").textContent = ot; $("#sOwed").classList.toggle("small", ot.includes("·"));
     $("#sPaid").textContent = pt; $("#sPaid").classList.toggle("small", pt.includes("·"));
-    $("#sActive").textContent = active; $("#sOver").textContent = over;
-    $("#sOver").classList.toggle("red", over>0);
-    $("#defaultCur").value = settings.defaultCurrency;
+    $("#sActive").textContent = active; $("#sOver").textContent = over; $("#sOver").classList.toggle("red", over>0);
     for(const s of STATUSES){
       const list = document.querySelector(`[data-list="${s}"]`);
       const all = sorted(s), items = all.filter(matches);
       list.replaceChildren(...items.map(cardEl));
       if(!items.length){
         const e=document.createElement("div"); e.className="empty";
-        e.textContent = all.length ? "No matching cards" : (s==="commissioned" ? "No commissions yet" : "Drag cards here");
+        e.textContent = all.length ? "No matching cards" : (s==="commissioned" ? "No commissions yet. Click Create to add one." : "Drag cards here");
         list.appendChild(e);
       }
-      const cnt = document.querySelector(`[data-count="${s}"]`);
-      cnt.textContent = items.length===all.length ? all.length : items.length+" of "+all.length;
+      document.querySelector(`[data-count="${s}"]`).textContent = items.length===all.length ? all.length : items.length+" of "+all.length;
     }
   }
 
   // ---------- toolbar ----------
   $("#search").addEventListener("input", e => { filterText = e.target.value.trim().toLowerCase(); render(); });
   $("#paidFilter").addEventListener("change", e => { filterPaid = e.target.value; render(); });
-  $("#defaultCur").addEventListener("change", e => {
-    if(!canWrite){ e.target.value = settings.defaultCurrency; return; }
-    settings.defaultCurrency = e.target.value; render(); saveSettings();
-  });
 
-  // ---------- card interactions ----------
+  // ---------- menus ----------
   const menu = $("#menu");
   function closeMenu(){ menu.classList.remove("open"); }
-  function openMenu(c, anchor){
-    if(!canWrite) return;
-    menu.innerHTML = "";
-    const add = (label, fn, cls) => { const b=document.createElement("button"); b.textContent=label; if(cls) b.className=cls; b.addEventListener("click",()=>{closeMenu(); fn();}); menu.appendChild(b); };
-    const sep = () => { const d=document.createElement("div"); d.className="sep"; menu.appendChild(d); };
-    add("Edit", ()=>openEdit(c));
-    add(c.paid==="paid" ? "Mark as not paid" : "Mark as paid", ()=>saveCard({...c, paid:c.paid==="paid"?"unpaid":"paid"}));
-    sep();
-    for(const s of STATUSES){ if(s===c.status) continue; add("Move to " + STATUS_LABEL[s], ()=>moveTo(c, s)); }
-    sep();
-    add("Delete", ()=>askDelete([c.id], "Delete this commission?", `“${c.client || "Untitled"}” will be removed from the board. This can’t be undone.`), "dangerous");
-    const r = anchor.getBoundingClientRect();
-    menu.classList.add("open");
+  function placeMenu(anchor){
+    const r = anchor.getBoundingClientRect(); menu.classList.add("open");
     const mw = menu.offsetWidth, mh = menu.offsetHeight;
     menu.style.left = Math.max(8, Math.min(r.right - mw, innerWidth - mw - 8)) + "px";
     menu.style.top = (r.bottom + 4 + mh > innerHeight ? r.top - mh - 4 : r.bottom + 4) + "px";
   }
-  function moveTo(c, status){ const list = sorted(status); const order = list.length ? list[list.length-1].order + 1000 : 1000; saveCard({...c, status, order}); }
-  document.addEventListener("pointerdown", e => { if(!menu.contains(e.target) && !e.target.closest(".more")) closeMenu(); });
+  function menuItem(label, fn, cls){ const b=document.createElement("button"); b.type="button"; b.textContent=label; if(cls) b.className=cls; b.addEventListener("click",()=>{closeMenu(); fn();}); menu.appendChild(b); }
+  function menuSep(){ const d=document.createElement("div"); d.className="sep"; menu.appendChild(d); }
+  function openCardMenu(c, anchor){
+    menu.innerHTML = ""; menu.dataset.for = c.id;
+    menuItem("Edit", ()=>openEdit(c));
+    menuItem(c.paid==="paid" ? "Mark as not paid" : "Mark as paid", ()=>updateCard({...c, paid:c.paid==="paid"?"unpaid":"paid"}));
+    menuSep();
+    for(const s of STATUSES){ if(s!==c.status) menuItem("Move to " + STATUS_LABEL[s], ()=>updateCard({...c, status:s, order:nextOrder(s)})); }
+    menuSep();
+    menuItem("Delete", ()=>askDelete([c.id]), "dangerous");
+    placeMenu(anchor);
+  }
+  $("#meBtn").addEventListener("click", e => {
+    if(menu.classList.contains("open") && menu.dataset.for==="me"){ closeMenu(); return; }
+    menu.innerHTML = ""; menu.dataset.for = "me";
+    const h=document.createElement("div"); h.className="head"; h.textContent = user ? user.email : ""; menu.appendChild(h);
+    menuItem("Settings", openSettings);
+    menuItem("Log out", async ()=>{ await sb.auth.signOut(); });
+    menuSep();
+    menuItem("Delete account…", askDeleteAccount, "dangerous");
+    placeMenu(e.currentTarget);
+  });
+  document.addEventListener("pointerdown", e => { if(!menu.contains(e.target) && !e.target.closest(".more, #meBtn")) closeMenu(); });
   window.addEventListener("scroll", closeMenu, true);
 
+  // ---------- card clicks ----------
   $("#board").addEventListener("click", e => {
     if(justDragged){ justDragged=false; return; }
     const addBtn = e.target.closest("[data-add]"); if(addBtn){ openEdit(null, addBtn.dataset.add); return; }
-    const card = e.target.closest(".card"); if(!card) return;
+    const card = e.target.closest(".card"); if(!card || card.dataset.id.startsWith("tmp-")) return;
     const c = cards.get(card.dataset.id); if(!c) return;
-    if(e.target.closest(".paid")){ if(canWrite) saveCard({...c, paid: c.paid==="paid"?"unpaid":"paid"}); return; }
-    if(e.target.closest(".more")){ menu.classList.contains("open") ? closeMenu() : openMenu(c, e.target.closest(".more")); return; }
+    if(e.target.closest(".paid")){ updateCard({...c, paid: c.paid==="paid"?"unpaid":"paid"}); return; }
+    if(e.target.closest(".more")){ (menu.classList.contains("open") && menu.dataset.for===c.id) ? closeMenu() : openCardMenu(c, e.target.closest(".more")); return; }
     openEdit(c);
   });
   $("#board").addEventListener("keydown", e => {
@@ -431,7 +666,6 @@
   function setPaid(v){ paidVal=v; document.querySelectorAll("#fPaid button").forEach(b=>b.classList.toggle("on", b.dataset.v===v)); }
   document.querySelectorAll("#fPaid button").forEach(b=>b.addEventListener("click",()=>setPaid(b.dataset.v)));
   function openEdit(c, status){
-    if(!canWrite) return;
     editing = c ? c.id : null;
     $("#editTitle").textContent = c ? "Edit commission" : "Create commission";
     $("#editSave").textContent = c ? "Save" : "Create";
@@ -439,13 +673,12 @@
     $("#fDesc").value = c ? c.desc : "";
     $("#fDeadline").value = c ? c.deadline : "";
     $("#fPrice").value = c && c.price ? c.price : "";
-    $("#fCur").value = c ? c.currency : settings.defaultCurrency;
+    $("#fCur").value = c ? c.currency : profile.default_currency;
     $("#fStatus").value = c ? c.status : (status || "commissioned");
     setPaid(c ? c.paid : "unpaid");
     $("#editDelete").style.visibility = c ? "visible" : "hidden";
     $("#clientErr").style.display = "none";
-    editScrim.classList.add("open");
-    setTimeout(()=>$("#fClient").focus(), 30);
+    editScrim.classList.add("open"); $("#fClient").focus();
   }
   function closeEdit(){ editScrim.classList.remove("open"); editing=null; }
   $("#addBtn").addEventListener("click", ()=>openEdit(null));
@@ -455,55 +688,99 @@
     e.preventDefault();
     const client = $("#fClient").value.trim();
     if(!client){ $("#clientErr").style.display="block"; $("#fClient").focus(); return; }
-    const status = $("#fStatus").value;
-    const base = editing ? cards.get(editing) : null;
-    let order;
-    if(base && base.status===status) order = base.order;
-    else { const list = sorted(status); order = list.length ? list[list.length-1].order + 1000 : 1000; }
-    const c = { id: editing || newId(), client, desc: $("#fDesc").value.trim(), deadline: $("#fDeadline").value,
-      price: parseFloat($("#fPrice").value)||0, currency: validCur($("#fCur").value) || settings.defaultCurrency,
+    const status = $("#fStatus").value, base = editing ? cards.get(editing) : null;
+    const order = base && base.status===status ? base.order : nextOrder(status);
+    const c = { id: editing, client, desc: $("#fDesc").value.trim(), deadline: $("#fDeadline").value,
+      price: parseFloat($("#fPrice").value)||0, currency: CURRENCIES[$("#fCur").value] ? $("#fCur").value : profile.default_currency,
       paid: paidVal, status, order, created: base ? base.created : Date.now() };
-    closeEdit(); saveCard(c);
+    closeEdit();
+    if(base) updateCard(c); else createCard(c);
   });
-  $("#editDelete").addEventListener("click", () => {
-    const c = cards.get(editing); if(!c) return; closeEdit();
-    askDelete([c.id], "Delete this commission?", `“${c.client || "Untitled"}” will be removed from the board. This can’t be undone.`);
+  $("#editDelete").addEventListener("click", () => { const id = editing; closeEdit(); if(id) askDelete([id]); });
+
+  // ---------- settings ----------
+  const settingsScrim = $("#settingsScrim");
+  function openSettings(){ $("#stName").value = profile.display_name; $("#stCur").value = profile.default_currency; settingsScrim.classList.add("open"); $("#stName").focus(); }
+  $("#settingsCancel").addEventListener("click", ()=>settingsScrim.classList.remove("open"));
+  settingsScrim.addEventListener("pointerdown", e => { if(e.target===settingsScrim) settingsScrim.classList.remove("open"); });
+  $("#settingsForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const next = { display_name: $("#stName").value.trim().slice(0,60), default_currency: $("#stCur").value };
+    if(!next.display_name){ $("#stName").focus(); return; }
+    settingsScrim.classList.remove("open");
+    const { error } = await sb.from("profiles").update(next).eq("id", user.id);
+    if(error){ toast("Couldn’t save settings: " + friendly(error)); return; }
+    profile = next; applyProfile(); render(); toast("Settings saved.");
   });
 
   // ---------- confirm ----------
-  let pendingDelete = [];
+  let confirmAction = null;
   const confirmScrim = $("#confirmScrim");
-  function askDelete(ids, title, text){
-    if(!canWrite) return;
-    pendingDelete = ids; $("#confirmTitle").textContent = title; $("#confirmText").textContent = text;
-    confirmScrim.classList.add("open"); setTimeout(()=>$("#confirmNo").focus(),30);
+  function askConfirm({title, text, button="Delete", typeToConfirm=false, action}){
+    $("#confirmTitle").textContent = title; $("#confirmText").textContent = text; $("#confirmYes").textContent = button;
+    $("#confirmTypeWrap").hidden = !typeToConfirm; $("#confirmType").value = "";
+    $("#confirmYes").disabled = typeToConfirm;
+    confirmAction = action; confirmScrim.classList.add("open");
+    (typeToConfirm ? $("#confirmType") : $("#confirmNo")).focus();
   }
-  $("#confirmNo").addEventListener("click", ()=>confirmScrim.classList.remove("open"));
-  confirmScrim.addEventListener("pointerdown", e => { if(e.target===confirmScrim) confirmScrim.classList.remove("open"); });
-  $("#confirmYes").addEventListener("click", async () => {
-    confirmScrim.classList.remove("open");
-    const ids = pendingDelete; pendingDelete = [];
-    for(const id of ids) await removeCard(id);
-  });
+  $("#confirmType").addEventListener("input", e => { $("#confirmYes").disabled = e.target.value.trim().toUpperCase() !== "DELETE"; });
+  function closeConfirm(){ confirmScrim.classList.remove("open"); confirmAction=null; }
+  $("#confirmNo").addEventListener("click", closeConfirm);
+  confirmScrim.addEventListener("pointerdown", e => { if(e.target===confirmScrim) closeConfirm(); });
+  $("#confirmYes").addEventListener("click", () => { const a = confirmAction; closeConfirm(); if(a) a(); });
+
+  function askDelete(ids){
+    const c = cards.get(ids[0]);
+    askConfirm({ title:"Delete this commission?", text:`“${c ? c.client : "This card"}” will be removed from your board. This can’t be undone.`, action:()=>deleteCards(ids) });
+  }
   $("#clearDone").addEventListener("click", () => {
     const ids = sorted("done").filter(c=>c.paid==="paid").map(c=>c.id);
-    if(!ids.length){ note.textContent = "Nothing to clear: no paid cards in Done yet."; note.className="note"; setTimeout(setStatusNote, 3000); return; }
-    askDelete(ids, `Clear ${ids.length} paid card${ids.length===1?"":"s"}?`, "Every card in Done that’s marked Paid will be deleted. Unpaid ones stay. This can’t be undone.");
+    if(!ids.length){ toast("Nothing to clear: no paid cards in Done yet."); return; }
+    askConfirm({ title:`Clear ${ids.length} paid card${ids.length===1?"":"s"}?`, text:"Every card in Done that’s marked Paid will be deleted. Unpaid ones stay. This can’t be undone.", action:()=>deleteCards(ids) });
   });
-  document.addEventListener("keydown", e => { if(e.key==="Escape"){ closeEdit(); closeMenu(); confirmScrim.classList.remove("open"); } });
+  function askDeleteAccount(){
+    askConfirm({ title:"Delete your account?", text:"This permanently deletes your account and every commission on your board. This can’t be undone.",
+      button:"Delete account", typeToConfirm:true, action: async () => {
+        const { error } = await sb.rpc("delete_account");
+        if(error){ toast("Couldn’t delete account: " + friendly(error)); return; }
+        await sb.auth.signOut(); toast("Your account has been deleted.");
+      }});
+  }
+  document.addEventListener("keydown", e => { if(e.key==="Escape"){ closeEdit(); closeMenu(); closeConfirm(); settingsScrim.classList.remove("open"); } });
+
+  // ---------- import cards saved in this browser by the old version ----------
+  function oldLocalCards(){ try{ const raw = localStorage.getItem(OLD_LS_KEY); const arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr.filter(c=>c && c.client) : []; }catch(e){ return []; } }
+  function checkImport(){
+    const old = oldLocalCards();
+    let dismissed = false; try{ dismissed = localStorage.getItem(OLD_LS_KEY+"-dismissed-"+user.id) === "1"; }catch(e){}
+    $("#importBanner").hidden = !old.length || dismissed;
+    $("#importText").textContent = `This browser has ${old.length} card${old.length===1?"":"s"} from before you had an account. Add ${old.length===1?"it":"them"} to your board?`;
+  }
+  $("#importDismiss").addEventListener("click", () => { try{ localStorage.setItem(OLD_LS_KEY+"-dismissed-"+user.id, "1"); }catch(e){} $("#importBanner").hidden = true; });
+  $("#importBtn").addEventListener("click", async () => {
+    const old = oldLocalCards(); if(!old.length) return;
+    $("#importBtn").disabled = true;
+    const rows = old.map((c,i) => toRow({ client:String(c.client).slice(0,80), desc:String(c.desc||""), deadline: /^\d{4}-\d{2}-\d{2}$/.test(c.deadline||"") ? c.deadline : "",
+      price:Number(c.price)||0, currency: CURRENCIES[c.currency] ? c.currency : "EUR", paid: c.paid==="paid" ? "paid" : "unpaid",
+      status: STATUSES.includes(c.status) ? c.status : "commissioned", order: Number(c.order) || (i+1)*1000 }));
+    const { error } = await sb.from("commissions").insert(rows);
+    $("#importBtn").disabled = false;
+    if(error){ toast("Import failed: " + friendly(error)); return; }
+    try{ localStorage.removeItem(OLD_LS_KEY); }catch(e){}
+    $("#importBanner").hidden = true;
+    if(await loadCards()) render();
+    toast(`Imported ${rows.length} card${rows.length===1?"":"s"}.`);
+  });
 
   // ---------- drag & drop (mouse: immediate; touch: long-press) ----------
   let drag = null, justDragged = false, pressTimer = null;
   $("#board").addEventListener("pointerdown", e => {
-    if(!canWrite || e.button !== 0) return;
-    const card = e.target.closest(".card"); if(!card) return;
+    if(e.button !== 0) return;
+    const card = e.target.closest(".card"); if(!card || card.dataset.id.startsWith("tmp-")) return;
     if(e.target.closest(".paid, .more")) return;
     drag = { id: card.dataset.id, el: card, startX: e.clientX, startY: e.clientY, active: false, pointerId: e.pointerId, touch: e.pointerType !== "mouse" };
-    if(drag.touch){
-      pressTimer = setTimeout(() => { if(drag && !drag.active){ startDrag(drag.startX, drag.startY); if(navigator.vibrate) try{navigator.vibrate(10)}catch(_){} } }, 350);
-    }
+    if(drag.touch) pressTimer = setTimeout(() => { if(drag && !drag.active){ startDrag(drag.startX, drag.startY); try{ navigator.vibrate && navigator.vibrate(10); }catch(_){} } }, 350);
   });
-  // stop the page scrolling once a touch drag has started
   document.addEventListener("touchmove", e => { if(drag && drag.active) e.preventDefault(); }, {passive:false});
   function startDrag(x, y){
     const r = drag.el.getBoundingClientRect();
@@ -545,66 +822,19 @@
     document.querySelectorAll(".col").forEach(c=>c.classList.remove("over"));
     if(!commit || !d.target){ render(); return; }
     const c = cards.get(d.id); if(!c){ render(); return; }
-    // order relative to the full (unfiltered) column
     const list = sorted(d.target.status).filter(x=>x.id!==c.id);
     let idx = d.target.beforeId ? list.findIndex(x=>x.id===d.target.beforeId) : -1;
-    if(idx<0){ // dropped at the end of the visible list: place after the last visible card
-      const visible = list.filter(matches); const last = visible[visible.length-1];
-      idx = last ? list.indexOf(last)+1 : list.length;
-    }
+    if(idx<0){ const visible = list.filter(matches); const last = visible[visible.length-1]; idx = last ? list.indexOf(last)+1 : list.length; }
     const prev = list[idx-1], next = list[idx];
-    let order;
-    if(prev && next) order = (prev.order + next.order)/2;
-    else if(prev) order = prev.order + 1000;
-    else if(next) order = next.order - 1000;
-    else order = 1000;
+    const order = prev && next ? (prev.order + next.order)/2 : prev ? prev.order + 1000 : next ? next.order - 1000 : 1000;
     if(c.status===d.target.status && c.order===order){ render(); return; }
-    saveCard({...c, status:d.target.status, order});
+    updateCard({...c, status:d.target.status, order});
   }
   window.addEventListener("pointerup", e => { if(drag && e.pointerId===drag.pointerId) endDrag(true); });
   window.addEventListener("pointercancel", e => { if(drag && e.pointerId===drag.pointerId) endDrag(false); });
   window.addEventListener("contextmenu", e => { if(drag && drag.active) e.preventDefault(); });
 
-  // ---------- boot ----------
-  function setStatusNote(){
-    if(!canWrite){ note.textContent = "You can view this board but not change it."; note.className="note warn"; return; }
-    note.textContent = col ? "Changes save automatically and sync across your devices."
-                           : "Saved in this browser only. Open the board from claude.ai to sync across devices.";
-    note.className = col ? "note" : "note warn";
-  }
-  render();
-
-  (async () => {
-    const fallbackTimer = setTimeout(() => { if(!col){ lsLoad(); render(); setStatusNote(); } }, 10500);
-    try{ const cl = window.claude; db = cl && cl.use ? await cl.use("db") : null; }catch(e){ db = null; }
-    if(!db){ clearTimeout(fallbackTimer); lsLoad(); render(); setStatusNote(); return; }
-    try{
-      const user = await window.claude.use("user");
-      if(user && user.can){ const w = await user.can("data.write"); if(w === false) canWrite = false; }
-    }catch(e){}
-    col = db.collection("cards");
-    settingsRef = db.doc("settings/board");
-    clearTimeout(fallbackTimer);
-    let loaded = false;
-    const loadTimer = setTimeout(() => { if(!loaded){ note.textContent = "Can’t reach your saved board yet. It may be out of date."; note.className="note warn"; } }, 10000);
-    col.onSnapshot(snap => {
-      const next = new Map();
-      snap.docs.forEach(d => { const v = d.data(); if(v) next.set(d.id, {id:d.id, ...clean(v)}); });
-      cards = next;
-      if(!drag || !drag.active) render();
-      if(!snap.metadata.fromCache){ loaded = true; clearTimeout(loadTimer); setStatusNote(); }
-    }, err => {
-      clearTimeout(loadTimer);
-      if(err && err.code === "revoked") canWrite = false;
-      note.textContent = "Lost connection to your saved board. Reload the page to reconnect."; note.className="note warn";
-    });
-    settingsRef.onSnapshot(s => {
-      const v = s.exists ? s.data() : null;
-      if(v && validCur(v.defaultCurrency)){ settings.defaultCurrency = v.defaultCurrency; if(!drag || !drag.active) render(); }
-    }, () => {});
-  })();
-
-  setInterval(() => { if(!drag) render(); }, 60*60*1000);
+  setInterval(() => { if(user && !drag) render(); }, 60*60*1000);
 })();
 </script>
 </body>
