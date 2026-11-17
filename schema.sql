@@ -123,3 +123,6 @@ $$;
 create trigger commissions_set_completed_at
   before insert or update on public.commissions
   for each row execute function public.set_completed_at();
+
+-- 7. Cleared cards stay saved for earnings (same as migrate-002-archived.sql)
+alter table public.commissions add column if not exists archived boolean not null default false;

@@ -351,7 +351,7 @@
       </section>
       <section class="col" data-status="done">
         <div class="col-head"><h2>Done</h2><span class="count" data-count="done">0</span>
-          <button class="col-tool" id="clearDone" title="Delete every paid card in Done">Clear paid</button></div>
+          <button class="col-tool" id="clearDone" title="Hide every paid card in Done (earnings are kept)">Clear paid</button></div>
         <div class="list" data-list="done"></div>
       </section>
     </div>
@@ -607,7 +607,7 @@
     return { id:r.id, client:r.client||"", desc:r.description||"", deadline:r.deadline||"", price:Number(r.price)||0,
       currency: CURRENCIES[r.currency] ? r.currency : "USD", paid: r.paid ? "paid" : "unpaid",
       status: STATUSES.includes(r.status) ? r.status : "commissioned", order: Number(r.sort_order)||0, created: Date.parse(r.created_at)||0,
-      completedAt: r.completed_at ? Date.parse(r.completed_at) : null };
+      completedAt: r.completed_at ? Date.parse(r.completed_at) : null, archived: !!r.archived };
   }
   function toRow(c){
     return { client:c.client.slice(0,80), description:(c.desc||"").slice(0,1000), deadline:c.deadline||null,
@@ -652,7 +652,7 @@
   function fmtDate(ds){ const [y,m,d]=ds.split("-").map(Number); if(!y) return "";
     const opts={day:"numeric",month:"short"}; if(y!==new Date().getFullYear()) opts.year="numeric";
     return new Date(y,m-1,d).toLocaleDateString("en-GB",opts); }
-  function sorted(status){ return [...cards.values()].filter(c=>c.status===status).sort((a,b)=>(a.order-b.order)||(a.created-b.created)); }
+  function sorted(status){ return [...cards.values()].filter(c=>c.status===status && !c.archived).sort((a,b)=>(a.order-b.order)||(a.created-b.created)); }
   function matches(c){
     if(filterPaid!=="all" && c.paid!==filterPaid) return false;
     return !filterText || (c.client+" "+c.desc).toLowerCase().includes(filterText);
@@ -856,12 +856,27 @@
 
   function askDelete(ids){
     const c = cards.get(ids[0]);
-    askConfirm({ title:"Delete this commission?", text:`“${c ? c.client : "This card"}” will be removed from your board. This can’t be undone.`, action:()=>deleteCards(ids) });
+    const earnedCard = c && c.status==="done" && c.paid==="paid";
+    askConfirm({ title:"Delete this commission?", text:`“${c ? c.client : "This card"}” will be removed from your board` +
+      (earnedCard ? ", and its money will no longer count in your earnings. To keep the earnings, use “Clear paid” on the Done column instead." : ".") + " This can’t be undone.", action:()=>deleteCards(ids) });
+  }
+  async function archiveCards(ids){
+    const prev = ids.map(id => cards.get(id)).filter(Boolean);
+    prev.forEach(c => cards.set(c.id, {...c, archived:true})); render();
+    const { error } = await sb.from("commissions").update({ archived:true }).in("id", ids);
+    if(error){
+      prev.forEach(c => cards.set(c.id, c)); render();
+      const m = (error.message||"") + " " + (error.code||"");
+      if(/archived|column|PGRST204|42703/i.test(m)) toast("Run migrate-002-archived.sql in Supabase’s SQL Editor first, then try again. Nothing was removed.");
+      else toast("Couldn’t clear: " + friendly(error));
+      return;
+    }
+    toast(`Cleared ${ids.length} card${ids.length===1?"":"s"}. Your earnings are kept.`);
   }
   $("#clearDone").addEventListener("click", () => {
     const ids = sorted("done").filter(c=>c.paid==="paid").map(c=>c.id);
     if(!ids.length){ toast("Nothing to clear: no paid cards in Done yet."); return; }
-    askConfirm({ title:`Clear ${ids.length} paid card${ids.length===1?"":"s"}?`, text:"Every card in Done that’s marked Paid will be deleted. Unpaid ones stay. This can’t be undone.", action:()=>deleteCards(ids) });
+    askConfirm({ title:`Clear ${ids.length} paid card${ids.length===1?"":"s"}?`, text:"Every paid card in Done will be removed from the board. The money still counts in your Paid total and the Summary chart. Unpaid cards stay.", button:"Clear", action:()=>archiveCards(ids) });
   });
   function askDeleteAccount(){
     askConfirm({ title:"Delete your account?", text:"This permanently deletes your account and every commission on your board. This can’t be undone.",
