@@ -145,3 +145,7 @@ alter table public.commissions add constraint commissions_currency_check
 alter table public.profiles drop constraint if exists profiles_default_currency_check;
 alter table public.profiles add constraint profiles_default_currency_check
   check (default_currency in ('USD', 'EUR', 'GBP', 'ILS'));
+
+-- 9. Favorite niches (same as migrate-004-favorite-niches.sql)
+alter table public.profiles add column if not exists saved_niches text[] not null default '{}'
+  check (cardinality(saved_niches) <= 200);

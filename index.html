@@ -425,7 +425,12 @@
     </div>
     <div class="field" id="nicheField">
       <label for="fNiche">Niche</label>
-      <input class="input" id="fNiche" maxlength="60" placeholder="e.g. Fortnite, GTA, Minecraft">
+      <div class="combo">
+        <input class="input" id="fNiche" maxlength="60" placeholder="e.g. Fortnite, GTA, Minecraft" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="nicheList">
+        <button type="button" class="combo-btn" id="nicheToggle" aria-label="Show favorite niches" tabindex="-1"><svg width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></button>
+        <div class="combo-list" id="nicheList" role="listbox" hidden></div>
+      </div>
+      <label class="check" id="saveNicheWrap" hidden><input type="checkbox" id="fSaveNiche"> Add to my favorite niches</label>
     </div>
     <div class="grid2">
       <div class="field"><label for="fDeadline">Deadline</label><input class="input" id="fDeadline" type="date"></div>
@@ -486,7 +491,7 @@
       <button class="x-btn" id="summaryClose" type="button" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
     <p class="modal-sub">Money from commissions marked <b>Done</b> and <b>Paid</b>, counted in the month they were completed. Since November 2026.</p>
     <div class="migrate" id="migrateNote" hidden>To start tracking completion months, run <b>migrate-001-completed-at.sql</b> from your GitHub repo in Supabase’s SQL Editor, then reload.</div>
-    <div class="migrate" id="migrate3Note" hidden>To use ILS, niche, notes and saved clients, run <b>migrate-003-clients-niche-notes-ils.sql</b> from your GitHub repo in Supabase’s SQL Editor, then reload.</div>
+    <div class="migrate" id="migrate3Note" hidden>To use ILS, niche, notes and saved clients, run <b>migrate-003-clients-niche-notes-ils.sql</b> (and then <b>migrate-004-favorite-niches.sql</b>) from your GitHub repo in Supabase’s SQL Editor, then reload.</div>
     <div class="summary-cur-row"><label for="summaryCur">Show in</label><select class="chip-select" id="summaryCur" aria-label="Currency for the chart"></select>
       <span class="rate-note" id="summaryRateNote"></span></div>
     <div class="kpis">
@@ -554,6 +559,7 @@
   let filterText = "", filterPaid = "all";
   let recovering = false;
   let hasCompletedCol = true;
+  let hasV4 = true;   // favorite niches (migrate-004)
   let hasV3 = true;   // niche / notes / saved clients / ILS (migrate-003)
   let displayCur = "USD";
   let rates = null;   // { rates:{USD:1.05,...,EUR:1}, date:"2026-11-18", source:"..." } (base EUR)
@@ -705,7 +711,9 @@
     // is migrate-003 in place? (niche / notes / saved clients / ILS)
     const probe = await sb.from("profiles").select("saved_clients").eq("id", u.id).maybeSingle();
     hasV3 = !(probe.error && /saved_clients|column|PGRST204|42703/i.test((probe.error.message||"") + " " + (probe.error.code||"")));
-    const cols = "display_name, default_currency" + (hasV3 ? ", saved_clients" : "");
+    const probe4 = hasV3 ? await sb.from("profiles").select("saved_niches").eq("id", u.id).maybeSingle() : { error:{ message:"saved_niches" } };
+    hasV4 = !(probe4.error && /saved_niches|column|PGRST204|42703/i.test((probe4.error.message||"") + " " + (probe4.error.code||"")));
+    const cols = "display_name, default_currency" + (hasV3 ? ", saved_clients" : "") + (hasV4 ? ", saved_niches" : "");
     let { data: p, error: pe } = await sb.from("profiles").select(cols).eq("id", u.id).maybeSingle();
     if(!pe && !p){
       const name = (u.user_metadata && u.user_metadata.display_name) || (u.email||"").split("@")[0];
@@ -713,13 +721,14 @@
       p = ins.data;
     }
     if(p) profile = { display_name: p.display_name || (u.email||"").split("@")[0], default_currency: CURRENCIES[p.default_currency] ? p.default_currency : "USD",
-      saved_clients: Array.isArray(p.saved_clients) ? p.saved_clients.filter(x => typeof x === "string") : [] };
+      saved_clients: Array.isArray(p.saved_clients) ? p.saved_clients.filter(x => typeof x === "string") : [],
+      saved_niches: Array.isArray(p.saved_niches) ? p.saved_niches.filter(x => typeof x === "string") : [] };
     let dc = null; try{ dc = localStorage.getItem("cb-display-cur-" + u.id); }catch(e){}
     displayCur = CURRENCIES[dc] ? dc : profile.default_currency;
     ["#fCur","#stCur","#displayCur","#summaryCur"].forEach(id => fillCurrencySelect($(id), id !== "#fCur"));
     $("#displayCur").value = displayCur; $("#summaryCur").value = displayCur;
-    $("#nicheField").hidden = !hasV3; $("#notesField").hidden = !hasV3; $("#clientToggle").hidden = !hasV3;
-    $("#migrate3Note").hidden = hasV3;
+    $("#nicheField").hidden = !hasV3; $("#notesField").hidden = !hasV3; $("#clientToggle").hidden = !hasV3; $("#nicheToggle").hidden = !hasV4;
+    $("#migrate3Note").hidden = hasV3 && hasV4;
     const err = await loadCards();
     if(err){
       const m = err.message || String(err);
@@ -949,6 +958,7 @@
     $("#fClient").value = c ? c.client : "";
     $("#fDesc").value = c ? c.desc : "";
     $("#fNiche").value = c ? (c.niche||"") : "";
+    $("#fSaveNiche").checked = false; nicheCombo.update(); nicheCombo.close();
     formNotes = c ? (c.notes||[]).slice() : []; renderNotes(); closeComposer();
     $("#fSaveClient").checked = false; updateSaveClient(); closeClientList();
     $("#fDeadline").value = c ? c.deadline : "";
@@ -960,7 +970,7 @@
     $("#clientErr").style.display = "none";
     editScrim.classList.add("open"); if(!c) $("#fClient").focus();
   }
-  function closeEdit(){ editScrim.classList.remove("open"); editing=null; closeClientList(); }
+  function closeEdit(){ editScrim.classList.remove("open"); editing=null; closeClientList(); nicheCombo.close(); }
   $("#addBtn").addEventListener("click", ()=>openEdit(null));
   $("#editCancel").addEventListener("click", closeEdit);
   editScrim.addEventListener("pointerdown", e => { if(e.target===editScrim) closeEdit(); });
@@ -976,6 +986,8 @@
       niche: $("#fNiche").value.trim().slice(0,60), notes: formNotes.slice(),
       completedAt: base ? base.completedAt : null, archived: base ? base.archived : false };
     if(hasV3 && $("#fSaveClient").checked && !isSavedClient(client)) saveClients([...profile.saved_clients, client]);
+    const nicheVal = $("#fNiche").value.trim();
+    if(hasV4 && nicheVal && $("#fSaveNiche").checked && !nicheCombo.isSaved(nicheVal)) nicheCombo.save([...profile.saved_niches, nicheVal]);
     closeEdit();
     if(base) updateCard(c); else createCard(c);
   });
@@ -1046,6 +1058,56 @@
   }
   function openClientList(){ if(!hasV3) return; comboActive = -1; $("#clientList").hidden = false; $("#fClient").setAttribute("aria-expanded","true"); renderClientList(); }
   function closeClientList(){ $("#clientList").hidden = true; $("#fClient").setAttribute("aria-expanded","false"); comboActive = -1; }
+  // ----- favorite niches (same dropdown behaviour as saved clients) -----
+  const nicheCombo = (() => {
+    const input = $("#fNiche"), list = $("#nicheList"), wrap = $("#saveNicheWrap");
+    let active = -1;
+    const saved = () => profile.saved_niches || [];
+    const isSaved = v => { const n = v.trim().toLowerCase(); return saved().some(x => x.toLowerCase() === n); };
+    const update = () => { const v = input.value.trim(); wrap.hidden = !hasV4 || !v || isSaved(v); };
+    async function save(arr){
+      const prev = saved(), clean = [];
+      arr.forEach(x => { const v = String(x).trim().slice(0,60); if(v && !clean.some(y => y.toLowerCase() === v.toLowerCase())) clean.push(v); });
+      clean.sort((a,b) => a.localeCompare(b, undefined, {sensitivity:"base"}));
+      profile = {...profile, saved_niches: clean.slice(0,200)};
+      const { error } = await sb.from("profiles").update({ saved_niches: profile.saved_niches }).eq("id", user.id);
+      if(error){ profile = {...profile, saved_niches: prev}; toast("Couldn’t update favorite niches: " + friendly(error)); }
+      if(!list.hidden) render(); update();
+    }
+    function render(){
+      const q = input.value.trim().toLowerCase(), all = saved();
+      const items = all.filter(n => !q || n.toLowerCase().includes(q) || isSaved(q));
+      list.replaceChildren();
+      if(!items.length){ const e = document.createElement("div"); e.className = "combo-empty";
+        e.textContent = all.length ? "No favorite niche matches." : "No favorite niches yet. Type one and tick “Add to my favorite niches”."; list.appendChild(e); }
+      items.forEach((n, i) => {
+        const it = document.createElement("div"); it.className = "combo-item" + (i===active ? " active" : ""); it.setAttribute("role","option"); it.dataset.name = n;
+        const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = "★ " + n;
+        const rm = document.createElement("button"); rm.type = "button"; rm.className = "rm"; rm.title = "Remove from favorites"; rm.setAttribute("aria-label", "Remove " + n + " from favorite niches");
+        rm.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+        it.addEventListener("pointerdown", e => { e.preventDefault();
+          if(e.target.closest(".rm")){ save(all.filter(x => x !== n)); return; }
+          pick(n); });
+        it.append(nm, rm); list.appendChild(it);
+      });
+    }
+    function open(){ if(!hasV4) return; active = -1; list.hidden = false; input.setAttribute("aria-expanded","true"); render(); }
+    function close(){ list.hidden = true; input.setAttribute("aria-expanded","false"); active = -1; }
+    function pick(n){ input.value = n; close(); update(); }
+    $("#nicheToggle").addEventListener("pointerdown", e => { e.preventDefault(); list.hidden ? (open(), input.focus()) : close(); });
+    input.addEventListener("focus", () => { if(saved().length) open(); });
+    input.addEventListener("input", () => { update(); if(saved().length){ list.hidden ? open() : (active = -1, render()); } });
+    input.addEventListener("blur", () => setTimeout(close, 120));
+    input.addEventListener("keydown", e => {
+      const isOpen = !list.hidden, items = [...list.querySelectorAll(".combo-item")];
+      if(e.key === "ArrowDown"){ e.preventDefault(); if(!isOpen){ open(); return; } active = Math.min(items.length-1, active+1); render(); }
+      else if(e.key === "ArrowUp" && isOpen){ e.preventDefault(); active = Math.max(-1, active-1); render(); }
+      else if(e.key === "Enter" && isOpen && active >= 0 && items[active]){ e.preventDefault(); pick(items[active].dataset.name); }
+      else if(e.key === "Escape" && isOpen){ e.stopPropagation(); close(); }
+    });
+    return { update, close, isSaved, save };
+  })();
+
   function pickClient(n){ $("#fClient").value = n; closeClientList(); updateSaveClient(); $("#clientErr").style.display = "none"; $("#fNiche").focus(); }
   $("#clientToggle").addEventListener("pointerdown", e => { e.preventDefault(); $("#clientList").hidden ? (openClientList(), $("#fClient").focus()) : closeClientList(); });
   $("#fClient").addEventListener("focus", () => { if((profile.saved_clients||[]).length) openClientList(); });
