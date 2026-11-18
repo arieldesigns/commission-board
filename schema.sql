@@ -149,3 +149,7 @@ alter table public.profiles add constraint profiles_default_currency_check
 -- 9. Favorite niches (same as migrate-004-favorite-niches.sql)
 alter table public.profiles add column if not exists saved_niches text[] not null default '{}'
   check (cardinality(saved_niches) <= 200);
+
+-- 10. Niche colors (same as migrate-005-niche-colors.sql)
+alter table public.profiles add column if not exists niche_colors jsonb not null default '{}'::jsonb
+  check (jsonb_typeof(niche_colors) = 'object');
