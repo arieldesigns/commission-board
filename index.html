@@ -225,6 +225,44 @@
   table.months td.num,table.months th.num{text-align:right;font-variant-numeric:tabular-nums}
   .migrate{background:var(--amber-bg);color:var(--amber);border-radius:3px;padding:10px 12px;font-size:13px;margin-bottom:14px}
 
+  /* currency conversion */
+  .sum-cur{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+  .sum-cur .row{display:flex;align-items:center;gap:6px}
+  .sum-cur label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .rate-note{font-size:11px;color:var(--muted)}
+  .rate-note.warn{color:var(--amber)}
+  .summary-cur-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .summary-cur-row label{font-size:12px;font-weight:600;color:var(--sub)}
+
+  /* client combobox */
+  .combo{position:relative;display:flex}
+  .combo .input{border-radius:3px 0 0 3px}
+  .combo-btn{width:36px;flex:none;border:1px solid var(--border-strong);border-left:none;border-radius:0 3px 3px 0;background:var(--elevated);color:var(--sub);cursor:pointer;display:grid;place-items:center}
+  .combo-btn:hover{background:var(--surface)}
+  .combo-list{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--elevated);border-radius:3px;box-shadow:var(--shadow-raised);max-height:220px;overflow:auto;z-index:5;padding:4px 0}
+  .combo-item{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 12px;cursor:pointer}
+  .combo-item:hover,.combo-item.active{background:var(--gray-bg)}
+  .combo-item .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .combo-item .rm{border:none;background:transparent;color:var(--muted);width:24px;height:24px;border-radius:3px;cursor:pointer;display:grid;place-items:center;flex:none}
+  .combo-item .rm:hover{background:var(--hover);color:var(--red)}
+  .combo-empty{padding:8px 12px;color:var(--muted);font-size:13px}
+  .check{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--sub);margin-top:6px;cursor:pointer}
+  .check input{width:16px;height:16px;accent-color:var(--blue);margin:0}
+
+  /* niche + notes on cards */
+  .niche{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:3px;font-size:11px;font-weight:600;background:var(--blue-bg);color:var(--blue);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .note-count{display:inline-flex;align-items:center;gap:3px;height:20px;padding:0 4px;font-size:12px;font-weight:500;color:var(--muted)}
+
+  /* notes in the edit window */
+  .notes-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+  .note-item{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:8px 10px;position:relative}
+  .note-item .txt{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:19px;margin-right:24px}
+  .note-item .when{font-size:11px;color:var(--muted);margin-top:4px}
+  .note-item .rm{position:absolute;top:6px;right:6px;border:none;background:transparent;color:var(--muted);width:24px;height:24px;border-radius:3px;cursor:pointer;display:grid;place-items:center}
+  .note-item .rm:hover{background:var(--hover);color:var(--red)}
+  .note-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+  .notes-empty{font-size:13px;color:var(--muted);margin-bottom:6px}
+
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--toast-bg);color:var(--toast-text);padding:10px 16px;border-radius:3px;font-size:13px;box-shadow:var(--shadow-raised);z-index:200;display:none;max-width:90vw}
   .toast.show{display:block}
 
@@ -336,6 +374,11 @@
       <div class="sum"><div class="k">Paid</div><div class="v" id="sPaid">—</div></div>
       <div class="sum"><div class="k">Active</div><div class="v" id="sActive">0</div></div>
       <div class="sum"><div class="k">Overdue</div><div class="v" id="sOver">0</div></div>
+      <div class="sum-cur">
+        <div class="row"><label for="displayCur">Show money in</label>
+          <select class="chip-select" id="displayCur" aria-label="Currency to show totals in"></select></div>
+        <div class="rate-note" id="rateNote">Getting exchange rates…</div>
+      </div>
     </div>
 
     <div class="board" id="board">
@@ -368,18 +411,27 @@
     <h3 id="editTitle">Create commission</h3>
     <div class="field">
       <label for="fClient">Client <span class="req">*</span></label>
-      <input class="input" id="fClient" maxlength="80" placeholder="Channel or client name">
+      <div class="combo">
+        <input class="input" id="fClient" maxlength="80" placeholder="Type a name or pick a saved client" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="clientList">
+        <button type="button" class="combo-btn" id="clientToggle" aria-label="Show saved clients" tabindex="-1"><svg width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></button>
+        <div class="combo-list" id="clientList" role="listbox" hidden></div>
+      </div>
+      <label class="check" id="saveClientWrap" hidden><input type="checkbox" id="fSaveClient"> Add to my saved clients</label>
       <div class="err" id="clientErr">Client is required.</div>
     </div>
     <div class="field">
       <label for="fDesc">Thumbnail description</label>
       <textarea class="input" id="fDesc" maxlength="1000" placeholder="What the thumbnail is for, the idea, references…"></textarea>
     </div>
+    <div class="field" id="nicheField">
+      <label for="fNiche">Niche</label>
+      <input class="input" id="fNiche" maxlength="60" placeholder="e.g. Fortnite, GTA, Minecraft">
+    </div>
     <div class="grid2">
       <div class="field"><label for="fDeadline">Deadline</label><input class="input" id="fDeadline" type="date"></div>
       <div class="field"><label for="fPrice">Price</label>
         <div class="price-group">
-          <select class="input" id="fCur" aria-label="Currency"><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option></select>
+          <select class="input" id="fCur" aria-label="Currency"></select>
           <input class="input" id="fPrice" type="number" min="0" max="99999999" step="0.01" inputmode="decimal" placeholder="0">
         </div>
       </div>
@@ -391,6 +443,15 @@
       <div class="field"><label for="fStatus">Status</label>
         <select class="input" id="fStatus"><option value="commissioned">Commissioned</option><option value="progress">In progress</option><option value="done">Done</option></select>
       </div>
+    </div>
+    <div class="field" id="notesField">
+      <label>Notes</label>
+      <div class="notes-list" id="notesList"></div>
+      <div id="noteComposer" hidden>
+        <textarea class="input" id="noteText" maxlength="1000" placeholder="Write a note… e.g. client wants a brighter background"></textarea>
+        <div class="note-actions"><button type="button" class="btn subtle" id="noteCancel">Cancel</button><button type="button" class="btn primary" id="noteSave">Add note</button></div>
+      </div>
+      <button type="button" class="btn subtle" id="addNoteBtn">+ Add note</button>
     </div>
     <div class="modal-actions">
       <button type="button" class="btn subtle" id="editDelete" style="color:var(--red)">Delete</button>
@@ -408,7 +469,7 @@
     <h3>Settings</h3>
     <div class="field"><label for="stName">Display name</label><input class="input" id="stName" maxlength="60" required></div>
     <div class="field"><label for="stCur">Default currency for new cards</label>
-      <select class="input" id="stCur"><option value="USD">USD $</option><option value="EUR">EUR €</option><option value="GBP">GBP £</option></select></div>
+      <select class="input" id="stCur"></select></div>
     <div class="modal-actions">
       <div class="right">
         <button type="button" class="btn subtle" id="settingsCancel">Cancel</button>
@@ -425,7 +486,9 @@
       <button class="x-btn" id="summaryClose" type="button" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
     <p class="modal-sub">Money from commissions marked <b>Done</b> and <b>Paid</b>, counted in the month they were completed. Since November 2026.</p>
     <div class="migrate" id="migrateNote" hidden>To start tracking completion months, run <b>migrate-001-completed-at.sql</b> from your GitHub repo in Supabase’s SQL Editor, then reload.</div>
-    <div class="cur-tabs" id="curTabs" role="tablist" aria-label="Currency"></div>
+    <div class="migrate" id="migrate3Note" hidden>To use ILS, niche, notes and saved clients, run <b>migrate-003-clients-niche-notes-ils.sql</b> from your GitHub repo in Supabase’s SQL Editor, then reload.</div>
+    <div class="summary-cur-row"><label for="summaryCur">Show in</label><select class="chip-select" id="summaryCur" aria-label="Currency for the chart"></select>
+      <span class="rate-note" id="summaryRateNote"></span></div>
     <div class="kpis">
       <div class="sum"><div class="k">This month</div><div class="v" id="kThis">—</div></div>
       <div class="sum"><div class="k">Since Nov 2026</div><div class="v" id="kYear">—</div></div>
@@ -433,7 +496,7 @@
       <div class="sum"><div class="k">Jobs completed</div><div class="v" id="kJobs">0</div></div>
     </div>
     <div class="chart-wrap" id="chartWrap"><div class="tip" id="chartTip"></div></div>
-    <div class="chart-foot"><span class="note">Totals are kept separate per currency, not converted.</span>
+    <div class="chart-foot"><span class="note" id="chartFootNote">Payments in other currencies are converted at today’s exchange rate.</span>
       <button class="btn subtle" id="tableToggle" type="button">Show as table</button></div>
     <div id="monthTable" hidden></div>
   </div>
@@ -462,7 +525,8 @@
 
   const STATUSES = ["commissioned","progress","done"];
   const STATUS_LABEL = {commissioned:"Commissioned", progress:"In progress", done:"Done"};
-  const CURRENCIES = {USD:"$", EUR:"€", GBP:"£"};
+  const CURRENCIES = {USD:"$", EUR:"€", GBP:"£", ILS:"₪"};
+  const CUR_NAMES = {USD:"USD $", EUR:"EUR €", GBP:"GBP £", ILS:"ILS ₪"};
   const OLD_LS_KEY = "arieldzns-board-v1";
   const $ = s => document.querySelector(s);
 
@@ -490,6 +554,10 @@
   let filterText = "", filterPaid = "all";
   let recovering = false;
   let hasCompletedCol = true;
+  let hasV3 = true;   // niche / notes / saved clients / ILS (migrate-003)
+  let displayCur = "USD";
+  let rates = null;   // { rates:{USD:1.05,...,EUR:1}, date:"2026-11-18", source:"..." } (base EUR)
+  let ratesStale = false;
 
   // ---------- small UI helpers ----------
   let toastTimer;
@@ -511,6 +579,66 @@
   const redirectUrl = location.origin + location.pathname;
 
   $("#loadingSignOut").addEventListener("click", async () => { await sb.auth.signOut(); });
+
+  // ---------- live exchange rates ----------
+  // Daily reference rates from the European Central Bank (via Frankfurter), with a backup source.
+  const RATES_KEY = "cb-rates-v1", RATES_MAX_AGE = 6*60*60*1000;
+  async function fetchJSON(url){
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 7000);
+    try{ const r = await fetch(url, { signal: ctl.signal }); if(!r.ok) throw new Error("HTTP " + r.status); return await r.json(); }
+    finally{ clearTimeout(t); }
+  }
+  function validRates(r){ return r && Object.keys(CURRENCIES).every(k => typeof r[k] === "number" && r[k] > 0); }
+  async function loadRates(){
+    let cached = null;
+    try{ cached = JSON.parse(localStorage.getItem(RATES_KEY) || "null"); }catch(e){}
+    if(cached && validRates(cached.rates) && Date.now() - cached.fetched < RATES_MAX_AGE){ rates = cached; ratesStale = false; onRates(); return; }
+    const symbols = Object.keys(CURRENCIES).filter(k => k !== "EUR").join(",");
+    const sources = [
+      async () => { const j = await fetchJSON("https://api.frankfurter.dev/v1/latest?base=EUR&symbols=" + symbols); return { rates:{...j.rates, EUR:1}, date:j.date, source:"European Central Bank" }; },
+      async () => { const j = await fetchJSON("https://api.frankfurter.app/latest?from=EUR&to=" + symbols); return { rates:{...j.rates, EUR:1}, date:j.date, source:"European Central Bank" }; },
+      async () => { const j = await fetchJSON("https://open.er-api.com/v6/latest/EUR"); if(j.result !== "success") throw new Error("bad");
+        const r = { EUR:1 }; Object.keys(CURRENCIES).forEach(k => { if(j.rates[k]) r[k] = j.rates[k]; });
+        return { rates:r, date: new Date(j.time_last_update_unix*1000).toISOString().slice(0,10), source:"ExchangeRate-API" }; },
+    ];
+    for(const src of sources){
+      try{ const got = await src(); if(validRates(got.rates)){ got.fetched = Date.now(); rates = got; ratesStale = false;
+        try{ localStorage.setItem(RATES_KEY, JSON.stringify(got)); }catch(e){} onRates(); return; } }catch(e){}
+    }
+    if(cached && validRates(cached.rates)){ rates = cached; ratesStale = true; } else { rates = null; }
+    onRates();
+  }
+  function onRates(){ if(user){ render(); } }
+  // refresh rates every few hours while the page is open
+  setInterval(loadRates, RATES_MAX_AGE);
+  loadRates();
+
+  // amount in `from` -> amount in `to`; null if it can't be converted
+  function convert(amount, from, to){
+    if(from === to) return amount;
+    if(!rates || !rates.rates[from] || !rates.rates[to]) return null;
+    return amount / rates.rates[from] * rates.rates[to];
+  }
+  function fmtRateDate(d){ const [y,m,dd] = (d||"").split("-").map(Number); if(!y) return ""; return new Date(y,m-1,dd).toLocaleDateString("en-GB",{day:"numeric",month:"short"}); }
+  function rateNoteText(){
+    if(!rates) return { text:"Live exchange rates unavailable. Other currencies are left out of the total.", warn:true };
+    const others = Object.keys(CURRENCIES).filter(k => k !== displayCur).map(k => "1 " + k + " = " + fmtMoney(convert(1, k, displayCur), displayCur));
+    return { text:(ratesStale ? "Offline: using saved rates from " : "Live rates, ") + fmtRateDate(rates.date) + " · " + others.slice(0,2).join(" · "), warn:ratesStale,
+      title: "Source: " + rates.source + "\n" + others.join("\n") };
+  }
+  function fillCurrencySelect(sel, labels){
+    const v = sel.value; sel.replaceChildren();
+    Object.keys(CURRENCIES).forEach(k => { if(k === "ILS" && !hasV3 && sel.id !== "displayCur" && sel.id !== "summaryCur") return;
+      const o = document.createElement("option"); o.value = k; o.textContent = labels ? CUR_NAMES[k] : k; sel.appendChild(o); });
+    if(v && [...sel.options].some(o => o.value === v)) sel.value = v;
+  }
+  function setDisplayCur(k){
+    if(!CURRENCIES[k]) return; displayCur = k;
+    try{ localStorage.setItem("cb-display-cur-" + (user ? user.id : ""), k); }catch(e){}
+    $("#displayCur").value = k; $("#summaryCur").value = k; render();
+  }
+  $("#displayCur").addEventListener("change", e => setDisplayCur(e.target.value));
+  $("#summaryCur").addEventListener("change", e => setDisplayCur(e.target.value));
 
   // ---------- auth ----------
   document.querySelectorAll("[data-goto]").forEach(b => b.addEventListener("click", () => showAuthForm(b.dataset.goto)));
@@ -574,13 +702,24 @@
     user = u;
     showView("loadingView"); $("#loadingText").textContent = "Loading your board…"; $("#loadingDetail").textContent = ""; $("#loadingSignOut").hidden = true;
     // load profile (create it if the signup trigger hasn't)
-    let { data: p, error: pe } = await sb.from("profiles").select("display_name, default_currency").eq("id", u.id).maybeSingle();
+    // is migrate-003 in place? (niche / notes / saved clients / ILS)
+    const probe = await sb.from("profiles").select("saved_clients").eq("id", u.id).maybeSingle();
+    hasV3 = !(probe.error && /saved_clients|column|PGRST204|42703/i.test((probe.error.message||"") + " " + (probe.error.code||"")));
+    const cols = "display_name, default_currency" + (hasV3 ? ", saved_clients" : "");
+    let { data: p, error: pe } = await sb.from("profiles").select(cols).eq("id", u.id).maybeSingle();
     if(!pe && !p){
       const name = (u.user_metadata && u.user_metadata.display_name) || (u.email||"").split("@")[0];
-      const ins = await sb.from("profiles").insert({ id:u.id, display_name: name.slice(0,60) }).select("display_name, default_currency").single();
+      const ins = await sb.from("profiles").insert({ id:u.id, display_name: name.slice(0,60) }).select(cols).single();
       p = ins.data;
     }
-    if(p) profile = { display_name: p.display_name || (u.email||"").split("@")[0], default_currency: CURRENCIES[p.default_currency] ? p.default_currency : "USD" };
+    if(p) profile = { display_name: p.display_name || (u.email||"").split("@")[0], default_currency: CURRENCIES[p.default_currency] ? p.default_currency : "USD",
+      saved_clients: Array.isArray(p.saved_clients) ? p.saved_clients.filter(x => typeof x === "string") : [] };
+    let dc = null; try{ dc = localStorage.getItem("cb-display-cur-" + u.id); }catch(e){}
+    displayCur = CURRENCIES[dc] ? dc : profile.default_currency;
+    ["#fCur","#stCur","#displayCur","#summaryCur"].forEach(id => fillCurrencySelect($(id), id !== "#fCur"));
+    $("#displayCur").value = displayCur; $("#summaryCur").value = displayCur;
+    $("#nicheField").hidden = !hasV3; $("#notesField").hidden = !hasV3; $("#clientToggle").hidden = !hasV3;
+    $("#migrate3Note").hidden = hasV3;
     const err = await loadCards();
     if(err){
       const m = err.message || String(err);
@@ -607,12 +746,15 @@
     return { id:r.id, client:r.client||"", desc:r.description||"", deadline:r.deadline||"", price:Number(r.price)||0,
       currency: CURRENCIES[r.currency] ? r.currency : "USD", paid: r.paid ? "paid" : "unpaid",
       status: STATUSES.includes(r.status) ? r.status : "commissioned", order: Number(r.sort_order)||0, created: Date.parse(r.created_at)||0,
-      completedAt: r.completed_at ? Date.parse(r.completed_at) : null, archived: !!r.archived };
+      completedAt: r.completed_at ? Date.parse(r.completed_at) : null, archived: !!r.archived,
+      niche: typeof r.niche === "string" ? r.niche : "",
+      notes: Array.isArray(r.notes) ? r.notes.filter(n => n && typeof n.text === "string").map(n => ({ id:String(n.id||""), text:n.text, at:String(n.at||"") })) : [] };
   }
   function toRow(c){
     return { client:c.client.slice(0,80), description:(c.desc||"").slice(0,1000), deadline:c.deadline||null,
       price: Math.max(0, Math.round((Number(c.price)||0)*100)/100), currency:c.currency, paid:c.paid==="paid",
-      status:c.status, sort_order:c.order };
+      status:c.status, sort_order:c.order,
+      ...(hasV3 ? { niche:(c.niche||"").slice(0,60), notes:(c.notes||[]).slice(-100) } : {}) };
   }
 
   // refresh when coming back to the tab (keeps phone + computer in step)
@@ -655,7 +797,7 @@
   function sorted(status){ return [...cards.values()].filter(c=>c.status===status && !c.archived).sort((a,b)=>(a.order-b.order)||(a.created-b.created)); }
   function matches(c){
     if(filterPaid!=="all" && c.paid!==filterPaid) return false;
-    return !filterText || (c.client+" "+c.desc).toLowerCase().includes(filterText);
+    return !filterText || [c.client, c.desc, c.niche, ...(c.notes||[]).map(n=>n.text)].join(" ").toLowerCase().includes(filterText);
   }
   const AV_COLORS = ["#0c66e4","#6e5dc6","#1f845a","#c9372c","#a54800","#227d9b","#943d73","#5b7f24"];
   function initials(name){ const p=name.trim().split(/\s+/).filter(Boolean); if(!p.length) return "?"; return (p[0][0]+(p[1]?p[1][0]:(p[0][1]||""))).toUpperCase(); }
@@ -699,6 +841,10 @@
       }
       meta.appendChild(d);
     }
+    if(c.niche){ const n = document.createElement("span"); n.className = "niche"; n.textContent = c.niche; n.title = "Niche: " + c.niche; meta.appendChild(n); }
+    if(c.notes && c.notes.length){ const n = document.createElement("span"); n.className = "note-count";
+      n.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+      n.append(String(c.notes.length)); n.title = c.notes.length + " note" + (c.notes.length===1?"":"s") + ". Latest: " + c.notes[c.notes.length-1].text; meta.appendChild(n); }
     const name = c.client || "Untitled client";
     const av = el.querySelector(".avatar"); av.textContent = initials(name); av.style.background = avColor(name);
     el.querySelector(".client-name").textContent = name;
@@ -712,9 +858,16 @@
       const b = c.paid==="paid" ? paid : owed; b[c.currency] = (b[c.currency]||0) + (Number(c.price)||0);
       if(c.status!=="done"){ active++; const n=daysUntil(c.deadline); if(n!==null && n<0) over++; }
     }
-    const ot = totalsText(owed), pt = totalsText(paid);
-    $("#sOwed").textContent = ot; $("#sOwed").classList.toggle("small", ot.includes("·"));
-    $("#sPaid").textContent = pt; $("#sPaid").classList.toggle("small", pt.includes("·"));
+    const conv = obj => { let total = 0, missing = []; const parts = [];
+      Object.keys(obj).forEach(k => { if(!obj[k]) return; parts.push(fmtMoney(obj[k], k)); const v = convert(obj[k], k, displayCur); if(v === null) missing.push(k); else total += v; });
+      return { total, missing, breakdown: parts.join(" + ") }; };
+    [["#sOwed", owed], ["#sPaid", paid]].forEach(([id, obj]) => {
+      const r = conv(obj), el = $(id);
+      el.textContent = fmtMoney(r.total, displayCur) + (r.missing.length ? " + " + r.missing.map(k => fmtMoney(obj[k], k)).join(" + ") : "");
+      el.classList.toggle("small", r.missing.length > 0);
+      el.title = r.breakdown ? "Made up of " + r.breakdown : "";
+    });
+    const rn = rateNoteText(); const rnEl = $("#rateNote"); rnEl.textContent = rn.text; rnEl.classList.toggle("warn", rn.warn); rnEl.title = rn.title || "";
     $("#sActive").textContent = active; $("#sOver").textContent = over; $("#sOver").classList.toggle("red", over>0);
     for(const s of STATUSES){
       const list = document.querySelector(`[data-list="${s}"]`);
@@ -748,6 +901,7 @@
   function openCardMenu(c, anchor){
     menu.innerHTML = ""; menu.dataset.for = c.id;
     menuItem("Edit", ()=>openEdit(c));
+    if(hasV3) menuItem("Add note", ()=>{ openEdit(c); openComposer(); });
     menuItem(c.paid==="paid" ? "Mark as not paid" : "Mark as paid", ()=>updateCard({...c, paid:c.paid==="paid"?"unpaid":"paid"}));
     menuSep();
     for(const s of STATUSES){ if(s!==c.status) menuItem("Move to " + STATUS_LABEL[s], ()=>updateCard({...c, status:s, order:nextOrder(s)})); }
@@ -794,6 +948,9 @@
     $("#editSave").textContent = c ? "Save" : "Create";
     $("#fClient").value = c ? c.client : "";
     $("#fDesc").value = c ? c.desc : "";
+    $("#fNiche").value = c ? (c.niche||"") : "";
+    formNotes = c ? (c.notes||[]).slice() : []; renderNotes(); closeComposer();
+    $("#fSaveClient").checked = false; updateSaveClient(); closeClientList();
     $("#fDeadline").value = c ? c.deadline : "";
     $("#fPrice").value = c && c.price ? c.price : "";
     $("#fCur").value = c ? c.currency : profile.default_currency;
@@ -801,9 +958,9 @@
     setPaid(c ? c.paid : "unpaid");
     $("#editDelete").style.visibility = c ? "visible" : "hidden";
     $("#clientErr").style.display = "none";
-    editScrim.classList.add("open"); $("#fClient").focus();
+    editScrim.classList.add("open"); if(!c) $("#fClient").focus();
   }
-  function closeEdit(){ editScrim.classList.remove("open"); editing=null; }
+  function closeEdit(){ editScrim.classList.remove("open"); editing=null; closeClientList(); }
   $("#addBtn").addEventListener("click", ()=>openEdit(null));
   $("#editCancel").addEventListener("click", closeEdit);
   editScrim.addEventListener("pointerdown", e => { if(e.target===editScrim) closeEdit(); });
@@ -815,10 +972,93 @@
     const order = base && base.status===status ? base.order : nextOrder(status);
     const c = { id: editing, client, desc: $("#fDesc").value.trim(), deadline: $("#fDeadline").value,
       price: parseFloat($("#fPrice").value)||0, currency: CURRENCIES[$("#fCur").value] ? $("#fCur").value : profile.default_currency,
-      paid: paidVal, status, order, created: base ? base.created : Date.now() };
+      paid: paidVal, status, order, created: base ? base.created : Date.now(),
+      niche: $("#fNiche").value.trim().slice(0,60), notes: formNotes.slice(),
+      completedAt: base ? base.completedAt : null, archived: base ? base.archived : false };
+    if(hasV3 && $("#fSaveClient").checked && !isSavedClient(client)) saveClients([...profile.saved_clients, client]);
     closeEdit();
     if(base) updateCard(c); else createCard(c);
   });
+  // ----- notes -----
+  let formNotes = [];
+  function fmtWhen(iso){ const d = new Date(iso); if(isNaN(d)) return "";
+    return d.toLocaleDateString("en-GB",{day:"numeric",month:"short", year: d.getFullYear()!==new Date().getFullYear() ? "numeric" : undefined}) + ", " + d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}); }
+  function renderNotes(){
+    const list = $("#notesList"); list.replaceChildren();
+    if(!formNotes.length){ const e = document.createElement("div"); e.className = "notes-empty"; e.textContent = "No notes yet."; list.appendChild(e); return; }
+    formNotes.forEach(n => {
+      const it = document.createElement("div"); it.className = "note-item";
+      const t = document.createElement("div"); t.className = "txt"; t.textContent = n.text;
+      const w = document.createElement("div"); w.className = "when"; w.textContent = fmtWhen(n.at);
+      const rm = document.createElement("button"); rm.type = "button"; rm.className = "rm"; rm.title = "Delete note"; rm.setAttribute("aria-label","Delete note");
+      rm.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+      rm.addEventListener("click", () => { formNotes = formNotes.filter(x => x !== n); renderNotes(); persistNotes(); });
+      it.append(t, w, rm); list.appendChild(it);
+    });
+  }
+  // notes on an existing card save straight away, so they aren't lost if you close the window
+  function persistNotes(){
+    if(!editing) return; const c = cards.get(editing); if(!c) return;
+    updateCard({...c, notes: formNotes.slice()});
+  }
+  function openComposer(){ $("#noteComposer").hidden = false; $("#addNoteBtn").hidden = true; $("#noteText").value = ""; $("#noteText").focus(); }
+  function closeComposer(){ $("#noteComposer").hidden = true; $("#addNoteBtn").hidden = false; }
+  $("#addNoteBtn").addEventListener("click", openComposer);
+  $("#noteCancel").addEventListener("click", closeComposer);
+  $("#noteSave").addEventListener("click", () => {
+    const text = $("#noteText").value.trim(); if(!text){ $("#noteText").focus(); return; }
+    if(formNotes.length >= 100){ toast("A card can have up to 100 notes."); return; }
+    formNotes.push({ id: Math.random().toString(36).slice(2,10), text: text.slice(0,1000), at: new Date().toISOString() });
+    renderNotes(); closeComposer(); persistNotes();
+  });
+  $("#noteText").addEventListener("keydown", e => { if(e.key === "Enter" && (e.metaKey || e.ctrlKey)){ e.preventDefault(); $("#noteSave").click(); } });
+
+  // ----- saved clients -----
+  let comboActive = -1;
+  function isSavedClient(name){ const n = name.trim().toLowerCase(); return (profile.saved_clients||[]).some(x => x.toLowerCase() === n); }
+  async function saveClients(list){
+    const prev = profile.saved_clients; const clean = [];
+    list.forEach(x => { const v = String(x).trim().slice(0,80); if(v && !clean.some(y => y.toLowerCase() === v.toLowerCase())) clean.push(v); });
+    clean.sort((a,b) => a.localeCompare(b, undefined, {sensitivity:"base"}));
+    profile = {...profile, saved_clients: clean.slice(0,200)};
+    const { error } = await sb.from("profiles").update({ saved_clients: profile.saved_clients }).eq("id", user.id);
+    if(error){ profile = {...profile, saved_clients: prev}; toast("Couldn’t update saved clients: " + friendly(error)); }
+    if(!$("#clientList").hidden) renderClientList(); updateSaveClient();
+  }
+  function updateSaveClient(){ const v = $("#fClient").value.trim(); $("#saveClientWrap").hidden = !hasV3 || !v || isSavedClient(v); }
+  function renderClientList(){
+    const list = $("#clientList"), q = $("#fClient").value.trim().toLowerCase();
+    const all = profile.saved_clients || [];
+    const items = all.filter(n => !q || n.toLowerCase().includes(q) || isSavedClient(q));
+    list.replaceChildren();
+    if(!items.length){ const e = document.createElement("div"); e.className = "combo-empty";
+      e.textContent = all.length ? "No saved client matches." : "No saved clients yet. Type a name and tick “Add to my saved clients”."; list.appendChild(e); }
+    items.forEach((n, i) => {
+      const it = document.createElement("div"); it.className = "combo-item" + (i===comboActive ? " active" : ""); it.setAttribute("role","option"); it.dataset.name = n;
+      const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = n;
+      const rm = document.createElement("button"); rm.type = "button"; rm.className = "rm"; rm.title = "Remove from saved clients"; rm.setAttribute("aria-label", "Remove " + n + " from saved clients");
+      rm.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+      it.addEventListener("pointerdown", e => { e.preventDefault();
+        if(e.target.closest(".rm")){ saveClients(all.filter(x => x !== n)); return; }
+        pickClient(n); });
+      it.append(nm, rm); list.appendChild(it);
+    });
+  }
+  function openClientList(){ if(!hasV3) return; comboActive = -1; $("#clientList").hidden = false; $("#fClient").setAttribute("aria-expanded","true"); renderClientList(); }
+  function closeClientList(){ $("#clientList").hidden = true; $("#fClient").setAttribute("aria-expanded","false"); comboActive = -1; }
+  function pickClient(n){ $("#fClient").value = n; closeClientList(); updateSaveClient(); $("#clientErr").style.display = "none"; $("#fNiche").focus(); }
+  $("#clientToggle").addEventListener("pointerdown", e => { e.preventDefault(); $("#clientList").hidden ? (openClientList(), $("#fClient").focus()) : closeClientList(); });
+  $("#fClient").addEventListener("focus", () => { if((profile.saved_clients||[]).length) openClientList(); });
+  $("#fClient").addEventListener("input", () => { updateSaveClient(); if((profile.saved_clients||[]).length){ $("#clientList").hidden ? openClientList() : (comboActive = -1, renderClientList()); } });
+  $("#fClient").addEventListener("blur", () => setTimeout(closeClientList, 120));
+  $("#fClient").addEventListener("keydown", e => {
+    const open = !$("#clientList").hidden, items = [...$("#clientList").querySelectorAll(".combo-item")];
+    if(e.key === "ArrowDown"){ e.preventDefault(); if(!open){ openClientList(); return; } comboActive = Math.min(items.length-1, comboActive+1); renderClientList(); }
+    else if(e.key === "ArrowUp" && open){ e.preventDefault(); comboActive = Math.max(-1, comboActive-1); renderClientList(); }
+    else if(e.key === "Enter" && open && comboActive >= 0 && items[comboActive]){ e.preventDefault(); pickClient(items[comboActive].dataset.name); }
+    else if(e.key === "Escape" && open){ e.stopPropagation(); closeClientList(); }
+  });
+
   $("#editDelete").addEventListener("click", () => { const id = editing; closeEdit(); if(id) askDelete([id]); });
 
   // ---------- settings ----------
@@ -833,7 +1073,7 @@
     settingsScrim.classList.remove("open");
     const { error } = await sb.from("profiles").update(next).eq("id", user.id);
     if(error){ toast("Couldn’t save settings: " + friendly(error)); return; }
-    profile = next; applyProfile(); render(); toast("Settings saved.");
+    profile = {...profile, ...next}; applyProfile(); render(); toast("Settings saved.");
   });
 
   // ---------- confirm ----------
@@ -924,9 +1164,6 @@
   function shortMoney(n, cur){ const sym = CURRENCIES[cur]||""; return n>=1000 ? sym + (Math.round(n/100)/10).toLocaleString("en-US") + "k" : fmtMoney(n, cur); }
 
   function openSummary(){
-    const done = earned();
-    const curs = Object.keys(CURRENCIES).filter(k => done.some(c => c.currency===k));
-    if(!summaryCur || (curs.length && !curs.includes(summaryCur))) summaryCur = curs.includes(profile.default_currency) ? profile.default_currency : (curs[0] || profile.default_currency);
     summaryScrim.classList.add("open"); renderSummary(); $("#summaryClose").focus();
   }
   function closeSummary(){ summaryScrim.classList.remove("open"); $("#chartTip").style.display="none"; }
@@ -938,19 +1175,21 @@
   function renderSummary(){
     $("#migrateNote").hidden = hasCompletedCol;
     const done = earned();
-    const curs = Object.keys(CURRENCIES).filter(k => done.some(c => c.currency===k));
-    const tabs = $("#curTabs"); tabs.replaceChildren();
-    const tabList = curs.length ? curs : [summaryCur];
-    tabList.forEach(k => { const b=document.createElement("button"); b.type="button"; b.role="tab"; b.textContent = k + " " + CURRENCIES[k];
-      b.className = k===summaryCur ? "on" : ""; b.setAttribute("aria-selected", k===summaryCur);
-      b.addEventListener("click", () => { summaryCur = k; renderSummary(); }); tabs.appendChild(b); });
-    tabs.hidden = tabList.length < 2;
+    summaryCur = displayCur; $("#summaryCur").value = displayCur;
+    const rn = rateNoteText(); $("#summaryRateNote").textContent = rn.text; $("#summaryRateNote").classList.toggle("warn", rn.warn); $("#summaryRateNote").title = rn.title || "";
+    let skipped = 0;
 
     const months = chartMonths();
     const totals = Object.fromEntries(months.map(m => [m.key, {sum:0, jobs:0}]));
     let jobs = 0;
-    done.filter(c => c.currency===summaryCur).forEach(c => { const d = new Date(c.completedAt); const k = d.getFullYear()+"-"+d.getMonth();
-      if(totals[k]){ totals[k].sum += Number(c.price)||0; totals[k].jobs++; jobs++; } });
+    done.forEach(c => { const d = new Date(c.completedAt); const k = d.getFullYear()+"-"+d.getMonth();
+      if(!totals[k]) return;
+      const v = convert(Number(c.price)||0, c.currency, summaryCur);
+      if(v === null){ skipped++; return; }
+      totals[k].sum += v; totals[k].jobs++; jobs++; });
+    $("#chartFootNote").textContent = skipped
+      ? `${skipped} payment${skipped===1?"":"s"} in other currencies left out: live exchange rates are unavailable right now.`
+      : "Payments in other currencies are converted at the latest exchange rate.";
     const vals = months.map(m => Math.round(totals[m.key].sum*100)/100);
     const yearTotal = vals.reduce((a,b)=>a+b,0);
     const bestIdx = vals.reduce((bi,v,i)=> v>vals[bi] ? i : bi, 0);
